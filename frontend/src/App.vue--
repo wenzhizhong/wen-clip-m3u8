@@ -1,0 +1,359 @@
+<script lang="ts" setup>
+import { reactive, onMounted } from 'vue';
+import { operateType } from './common/constant/headerOperate';
+import { uploadM3u8Key } from './common/constant/localStorageKey';
+import { uploadM3u8Interface, ParseM3u8SliceInterface, PlayPathListInterface } from './common/types/m3u8Slice';
+import Header from './components/Header.vue'
+import SidebarCmp from './components/sidebar.vue'
+import videoList from './components/videoList.vue'
+import { getPathDir, getPathFileName } from './common/utils/path';
+
+
+const state = reactive({
+  uploadM3u8Data: {
+    M3u8Info:     {} as ParseM3u8SliceInterface,
+    PlayPathList: [] as PlayPathListInterface[]
+  } as uploadM3u8Interface,
+
+  uploadM3u8Dir: '',
+})
+onMounted(() => {
+  initDataFromCache()
+})
+// 初始化数据
+function initDataFromCache() {
+  const data = localStorage.getItem(uploadM3u8Key)
+  if (data) {
+    const uploadM3u8Data = JSON.parse(data) as uploadM3u8Interface
+    setUploadM3u8Data(uploadM3u8Data)
+  }
+}
+const headerCallback = (type :string, data :uploadM3u8Interface) => {
+  switch (type) {
+    case operateType.updoad:
+      localStorage.setItem(uploadM3u8Key, JSON.stringify(data))
+      setUploadM3u8Data(data)
+      break;
+    default:
+      break;
+  }
+}
+function setUploadM3u8Data(data : uploadM3u8Interface) {
+  state.uploadM3u8Dir = getPathDir(data.M3u8Path)
+  state.uploadM3u8Data = data
+  // console.log('data=', data)
+  // console.log('state.uploadM3u8Data.PlayPathList=', state.uploadM3u8Data.PlayPathList)
+  
+}
+
+
+
+
+import { ref, computed } from 'vue'
+import FileExplorer from './components/explorer/FileExplorer.vue'
+import type { FileItem, SelectedItem, FileExplorerExpose } from './components/explorer/file-explorer'
+
+const explorerRef = ref<FileExplorerExpose | null>(null)
+
+// 模拟数据
+const fileItems = ref<FileItem[]>([
+  { id: 1, name: '文档', type: 'folder', size: 2048000, modified: '2024-01-15' },
+  { id: 2, name: '图片', type: 'folder', size: 10240000, modified: '2024-01-14' },
+  { id: 3, name: '报告.pdf', type: 'file', size: 512000, modified: '2024-01-13' },
+  { id: 4, name: '照片.jpg', type: 'file', size: 2457600, modified: '2024-01-12' },
+  { id: 5, name: '音乐', type: 'folder', size: 51200000, modified: '2024-01-11' },
+  { id: 6, name: '视频.mp4', type: 'file', size: 102400000, modified: '2024-01-10' },
+  { id: 7, name: '代码', type: 'folder', size: 1024000, modified: '2024-01-09' },
+  { id: 8, name: 'index.html', type: 'file', size: 10240, modified: '2024-01-08' }
+])
+
+// 响应式状态（来自子组件事件）
+const selectedItems = ref<SelectedItem[]>([])
+const focusedIndex = ref<number>(-1)
+const anchorIndex = ref<number>(-1)
+
+const selectedCount = computed(() => selectedItems.value.length)
+
+// 事件处理
+const handleSelect = (items: SelectedItem[]) => {
+  selectedItems.value = items
+  console.log('选中项目:', items)
+}
+
+const handleFocusChange = (index: number, item: FileItem) => {
+  focusedIndex.value = index
+  console.log('焦点变化:', index, item.name)
+}
+
+const handleItemActivate = (index: number, item: FileItem) => {
+  console.log('激活项目:', index, item.name)
+  // 可以在这里处理打开文件/文件夹的逻辑
+}
+
+const formatSize = (bytes: number): string => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+const formatDate = (date: string | Date): string => {
+  return new Date(date).toLocaleDateString()
+}
+</script>
+
+<template>
+  <section class="container">
+    <Header :callback="headerCallback"/>
+    <section id="workBox">
+      <SidebarCmp :playPathList="state.uploadM3u8Data.PlayPathList"/>
+      <main>
+        <section>
+          <div id="selectFileName">
+            {{ getPathFileName(state.uploadM3u8Data.M3u8Path) }}
+          </div>
+          <!-- <videoList :localPath="state.uploadM3u8Dir" :playPathList="state.uploadM3u8Data.PlayPathList"/> -->
+          <section>
+               <div class="controls">
+                  <button @click="explorerRef?.selectAll()">全选 (Ctrl+A)</button>
+                  <button @click="explorerRef?.clearSelection()">清空 (Esc)</button>
+                  <div class="status">
+                    选中: {{ selectedCount }} 个项目 | 
+                    焦点: {{ focusedIndex }} | 
+                    锚点: {{ anchorIndex }}
+                  </div>
+                </div>
+                
+                <div class="instructions">
+                  <p><strong>操作说明：</strong></p>
+                  <ul>
+                    <li><strong>点击</strong>：单选项目</li>
+                    <li><strong>Shift+点击</strong>：从锚点到点击位置连选</li>
+                    <li><strong>Ctrl+点击</strong>：多选/取消选择</li>
+                    <li><strong>Shift+方向键</strong>：扩展选择范围</li>
+                    <li><strong>Ctrl+方向键</strong>：只移动焦点不改变选择</li>
+                  </ul>
+                </div>
+                
+                <FileExplorer
+                  ref="explorerRef"
+                  :items="fileItems"
+                  :multi-select="true"
+                  class="explorer"
+                  @select="handleSelect"
+                  @focus-change="handleFocusChange"
+                  @item-activate="handleItemActivate"
+                >
+                  <template #item="{ item, index, selected }">
+                    <div class="custom-item">
+                      <div class="item-icon">
+                        {{ item.type === 'folder' ? '📁' : '📄' }}
+                      </div>
+                      <div class="item-info">
+                        <div class="item-name">
+                          {{ index + 1 }}. {{ item.name }}
+                          <span v-if="selected" class="selected-indicator">✓</span>
+                          <span v-if="focusedIndex === index" class="focus-indicator">👁️</span>
+                          <span v-if="anchorIndex === index" class="anchor-indicator">⚓</span>
+                        </div>
+                        <div class="item-details">
+                          <span v-if="item.size">{{ formatSize(item.size) }}</span>
+                          <span v-if="item.modified">{{ formatDate(item.modified) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </FileExplorer>
+                
+                <div class="selected-info">
+                  <h3>选中项目 ({{ selectedCount }})</h3>
+                  <div v-for="item in selectedItems" :key="item.index" class="selected-item">
+                    {{ item.data.name }}
+                  </div>
+                </div>
+          </section>
+        </section>
+      </main>
+    </section>
+  </section>
+</template>
+
+<style >
+  html,body{
+    padding: 0;
+    text-align: left!important;
+    color: #000!important;
+    box-sizing: border-box;
+    background-color: #fff;
+    overflow: hidden;
+  }
+  #workBox{
+    display: flex;
+    flex-direction: row; 
+    height: calc(100vh - 52px);
+    main{
+      flex: 1;
+      height: inherit;
+      box-sizing: border-box;
+      padding: 10px;
+      height: calc(100vh - 52px);
+      overflow: hidden;
+      overflow-y: scroll;
+      &>section{
+        #selectFileName{
+          text-align: left;
+          min-height: 30px;
+          line-height: 30px;
+          font-size: 16px;
+          margin-bottom: 30px;
+        }
+      }
+    }
+  }
+</style>
+<style scoped>
+.app {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f5f5f5;
+}
+
+
+
+.controls {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.controls button {
+  padding: 8px 16px;
+  background: #0078d4;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.controls button:hover {
+  background: #106ebe;
+}
+
+.status {
+  margin-left: auto;
+  font-family: monospace;
+  color: #666;
+  font-size: 14px;
+}
+
+.instructions {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #e8f4fd;
+  border-radius: 8px;
+  border-left: 4px solid #0078d4;
+}
+
+.instructions ul {
+  margin: 10px 0 0 20px;
+  padding: 0;
+}
+
+.instructions li {
+  margin: 5px 0;
+  font-size: 14px;
+}
+
+.explorer {
+  height: 400px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: auto;
+  margin-bottom: 20px;
+  background: white;
+}
+
+.custom-item {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  transition: background-color 0.2s;
+}
+
+.custom-item:hover {
+  background: #f9f9f9;
+}
+
+.item-icon {
+  margin-right: 12px;
+  font-size: 20px;
+  width: 24px;
+  text-align: center;
+}
+
+.item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-name {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.item-details {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  color: #666;
+}
+
+.selected-indicator {
+  color: #0078d4;
+  margin-left: 8px;
+  font-weight: bold;
+}
+
+.focus-indicator {
+  color: #ff5722;
+  margin-left: 8px;
+}
+
+.anchor-indicator {
+  color: #4caf50;
+  margin-left: 8px;
+}
+
+.selected-info {
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.selected-info h3 {
+  margin: 0 0 12px 0;
+  color: #333;
+}
+
+.selected-item {
+  padding: 8px 12px;
+  margin: 4px 0;
+  background: white;
+  border-radius: 4px;
+  border: 1px solid #eee;
+  font-size: 14px;
+}
+
+</style>
