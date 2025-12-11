@@ -1,6 +1,10 @@
+[中文](./README.zh-cn.md) | English
 # README
 
-## About
+## About App
+This is a local m3u8 media clipper.
+
+## About Wails
 
 This is the official Wails Vue-TS template.
 
