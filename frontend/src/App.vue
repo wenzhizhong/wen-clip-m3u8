@@ -166,7 +166,7 @@ const initMergeSucCacheData = ()=>{
       <main>
         <section>
           <div id="selectFileName" v-if="state.uploadM3u8Data.M3u8Path">
-            <h3>{{ getPathFileName(state.uploadM3u8Data.M3u8Path) }}</h3>
+            <h3>{{ getPathFileName(state.uploadM3u8Data.M3u8Path).replace(".m3u8", "") }}</h3>
           </div>
           <div id="successMergeBox" v-if="state.mergeSuccessData.PlayPathList.length">
             <div >
@@ -269,16 +269,6 @@ const initMergeSucCacheData = ()=>{
             text-align: left;
             box-sizing: border-box;
             margin-left: 20px;
-            ul{
-              list-style: none;
-              padding: 0;
-              padding-left: 20px;
-              margin: 0;
-              li{
-                margin-bottom: 10px;
-                margin-bottom: 20px;
-              }
-            }
           }
         }
       }
