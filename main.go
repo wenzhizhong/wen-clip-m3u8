@@ -25,9 +25,10 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "clipM3u8Media",
-		Width:  1024,
-		Height: 768,
+		Title:         "clipM3u8Media",
+		Width:         1024,
+		Height:        768,
+		OnBeforeClose: (&goApi.Runtime{}).BeforeClose,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

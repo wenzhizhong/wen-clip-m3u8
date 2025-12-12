@@ -1,25 +1,42 @@
 <script lang="ts" setup>
 import { reactive, onMounted } from 'vue';
 import { operateType } from './common/constant/headerOperate';
-import { uploadM3u8Key } from './common/constant/localStorageKey';
-import { uploadM3u8Interface, ParseM3u8SliceInterface, PlayPathListInterface } from './common/types/m3u8Slice';
+import { deleteTagKey, mergeSuccessKey, uploadM3u8Key } from './common/constant/localStorageKey';
+import { uploadM3u8Interface, ParseM3u8SliceInterface, PlayPathListInterface, mergeSuccessInterface } from './common/types/m3u8Slice';
 import Header from './components/Header.vue'
 import SidebarCmp from './components/sidebar.vue'
 import MyVideo from './components/video.vue'
+import MyVideoInfo from './components/videoInfo.vue'
 import { getPathDir, getPathFileName } from './common/utils/path';
 
 
 const state = reactive({
   uploadM3u8Data: {
     M3u8Info:     {} as ParseM3u8SliceInterface,
-    PlayPathList: [] as PlayPathListInterface[]
+    PlayPathList: [] as PlayPathListInterface[],
+    M3u8Path: '',
   } as uploadM3u8Interface,
 
+  mergeSuccessData: {
+    M3u8Info:     {} as ParseM3u8SliceInterface,
+    PlayPathList: [] as PlayPathListInterface[],
+    M3u8Path: '',
+    MergePath: '',
+    Name : '',
+  } as mergeSuccessInterface,
+
   uploadM3u8Dir: '',
+  playPathListDeletedTag: {} as Record<string, boolean>,
 })
 onMounted(() => {
-  initDataFromCache()
+  Init()
 })
+
+function Init(){
+  initDataFromCache()
+  initDeleteTag()
+  initMergeSucCacheData()
+}
 // 初始化数据
 function initDataFromCache() {
   const data = localStorage.getItem(uploadM3u8Key)
@@ -28,11 +45,26 @@ function initDataFromCache() {
     setUploadM3u8Data(uploadM3u8Data)
   }
 }
-const headerCallback = (type :string, data :uploadM3u8Interface) => {
+const headerHeaderCallback = (type :string, data :any) => {
   switch (type) {
     case operateType.updoad:
+      data = data as uploadM3u8Interface
       localStorage.setItem(uploadM3u8Key, JSON.stringify(data))
       setUploadM3u8Data(data)
+      break;
+    case operateType.mergeSuc:
+      data = data as mergeSuccessInterface
+      if (data && data.PlayPathList && data.PlayPathList.length){
+        localStorage.setItem(mergeSuccessKey, JSON.stringify(data))
+        setMergeSuccessData(data)
+      }
+      break;
+    case operateType.clear:
+      window.location.reload()
+      break;
+    case operateType.reset:
+      window.location.reload()
+      console.log("============= window.location.reload()")
       break;
     default:
       break;
@@ -41,26 +73,27 @@ const headerCallback = (type :string, data :uploadM3u8Interface) => {
 function setUploadM3u8Data(data : uploadM3u8Interface) {
   state.uploadM3u8Dir = getPathDir(data.M3u8Path)
   state.uploadM3u8Data = data
-  // console.log('data=', data)
-  // console.log('state.uploadM3u8Data.PlayPathList=', state.uploadM3u8Data.PlayPathList)
-  
+}
+function setMergeSuccessData(data : mergeSuccessInterface) {
+  state.mergeSuccessData = data
 }
 
 
 
 
+
+/** 连选、单选处理- 开始*/
 import { ref, computed } from 'vue'
 import VideoExplorer from './components/explorerVideo/VideoExplorer.vue'
 import type {  SelectedItem, FileExplorerExpose } from './components/explorerVideo/file-explorer'
+import VideoList from './components/videoList.vue';
 
 const explorerRef = ref<FileExplorerExpose | null>(null)
-
 
 // 响应式状态（来自子组件事件）
 const selectedItems = ref<SelectedItem[]>([])
 const focusedIndex = ref<number>(-1)
 const anchorIndex = ref<number>(-1)
-
 const selectedCount = computed(() => selectedItems.value.length)
 
 // 事件处理
@@ -79,30 +112,68 @@ const handleItemActivate = (index: number, item: PlayPathListInterface) => {
   // 可以在这里处理打开文件/文件夹的逻辑
 }
 
-const formatSize = (bytes: number): string => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+const deletedTagCallback = (items: SelectedItem[])=> {
+  if (items && items.length > 0){
+    console.log('删除项目:', items)
+    for (let i = 0; i < items.length; i++) {
+      state.playPathListDeletedTag[items[i].data.path] = true
+    }
+    cacheDeleteTag()
+  }
+}
+const deletedTagRecverCallback = (items: SelectedItem[])=> {
+  if (items && items.length > 0){
+    console.log('接收到删除项目:', items)
+    for (let i = 0; i < items.length; i++) {
+        delete state.playPathListDeletedTag[items[i].data.path]
+    }
+    cacheDeleteTag()
+  }
+}
+const cacheDeleteTag = ()=>{ 
+  localStorage.setItem(deleteTagKey, JSON.stringify(state.playPathListDeletedTag))
 }
 
-const formatDate = (date: string | Date): string => {
-  return new Date(date).toLocaleDateString()
+const initDeleteTag = ()=>{ 
+  const data = localStorage.getItem(deleteTagKey)
+  if (data){
+    state.playPathListDeletedTag = data ? JSON.parse(data) as Record<string, boolean> : {}
+  }
 }
+
+const initMergeSucCacheData = ()=>{ 
+  const data = localStorage.getItem(mergeSuccessKey)
+  if (data){
+    let tmpData = data ? JSON.parse(data): {} 
+    state.mergeSuccessData = tmpData as mergeSuccessInterface
+  }
+}
+
+
+/** 连选、单选处理- 结束*/
+
+
 </script>
 
 <template>
   <section class="container">
-    <Header :callback="headerCallback"/>
+    <!-- header -->
+    <Header :callback="headerHeaderCallback"/>
+
     <section id="workBox">
+      <!-- sidebar -->
       <SidebarCmp :playPathList="state.uploadM3u8Data.PlayPathList"/>
       <main>
         <section>
           <div id="selectFileName">
-            {{ getPathFileName(state.uploadM3u8Data.M3u8Path) }}
+            <h3>{{ getPathFileName(state.uploadM3u8Data.M3u8Path) }}</h3>
           </div>
-          <!-- <videoList :localPath="state.uploadM3u8Dir" :playPathList="state.uploadM3u8Data.PlayPathList"/> -->
+          <div id="successMergeBox" v-if="state.mergeSuccessData.PlayPathList.length">
+            <div >
+              <VideoList :localPath="state.uploadM3u8Dir" :playPathList="state.mergeSuccessData.PlayPathList"/> 
+            </div>
+            <MyVideoInfo :merge-success-data="state.mergeSuccessData"></MyVideoInfo>
+          </div>
           <VideoExplorer
             ref="explorerRef"
             :items="state.uploadM3u8Data.PlayPathList"
@@ -111,6 +182,10 @@ const formatDate = (date: string | Date): string => {
             @select="handleSelect"
             @focus-change="handleFocusChange"
             @item-activate="handleItemActivate"
+            
+            :itemsDeletedSet="state.playPathListDeletedTag"
+            :deletedTagCallback="deletedTagCallback"
+            :deletedTagRecverCallback="deletedTagRecverCallback"
           >
             <template #item="{ item, index, selected }">
               <div class="custom-item">
@@ -133,26 +208,54 @@ const formatDate = (date: string | Date): string => {
     background-color: #fff;
     overflow: hidden;
   }
+  
   #workBox{
     display: flex;
     flex-direction: row; 
     height: 100vh;
+    box-sizing: border-box;
     main{
       flex: 1;
       height: inherit;
       box-sizing: border-box;
       padding: 0 10px;
-      height: 100vh;
       overflow: hidden;
       overflow-y: scroll;
       &>section{
-        height: 100vh;
+        box-sizing: border-box;
         #selectFileName{
+          box-sizing: border-box;
           text-align: left;
           min-height: 30px;
           line-height: 30px;
           font-size: 16px;
-          margin-bottom: 30px;
+          /* margin-bottom: 30px; */
+        }
+        #successMergeBox{ 
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: row;
+          margin-bottom: 50px;
+          &>div:first-child{ 
+            width: 1200px;
+            flex-shrink: 0;
+          }
+          &>div:last-child{ 
+            flex: 1;
+            text-align: left;
+            box-sizing: border-box;
+            margin-left: 20px;
+            ul{
+              list-style: none;
+              padding: 0;
+              padding-left: 20px;
+              margin: 0;
+              li{
+                margin-bottom: 10px;
+                margin-bottom: 20px;
+              }
+            }
+          }
         }
       }
     }

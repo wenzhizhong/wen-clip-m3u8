@@ -1,6 +1,6 @@
 <template>
   <div id="SidebarCmp">
-    <section v-for="value in playPathList" >
+    <section v-for="value in playPathList" @click="gotoSlice">
       {{value.name}}
     </section>
   </div>
@@ -29,15 +29,23 @@ const props = defineProps({
 
 defineOptions({name: 'SidebarCmp'})
 
+function gotoSlice(e:any) {
+  if (e.target.innerText){
+    window.location.href = "#"+ e.target.innerText
+  }
+}
+
 </script>
 <style scoped>
 #SidebarCmp{
   width: 200px;
   flex-shrink: 0;
-  height: inherit;
+  height: calc(100vh - 60px);
   border-right: solid 2px #c9c9c9;
   overflow: hidden;
+  overflow-y: scroll;
   &>section{
+    cursor: pointer;
     box-sizing: border-box;
     border-bottom: solid 1px #ececec;
     text-align: left!important;

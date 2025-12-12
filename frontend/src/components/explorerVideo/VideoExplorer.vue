@@ -14,6 +14,7 @@
       class="file-item"
       :class="{
         'selected': isSelected(index),
+        'deleted-tag': itemsDeletedSet[item.path],
         'focused': isFocused(index),
         'anchor': isAnchor(index)
       }"
@@ -42,23 +43,33 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import type {  FileExplorerExpose, SelectedItem } from './file-explorer'
 import ContextMenu from './ContextMenu.vue'
 import { PlayPathListInterface } from '../../common/types/m3u8Slice'
+// import { confirm as myConfirm } from '../confirm.vue'
 
 // Props 定义
 interface FileExplorerProps {
   items: PlayPathListInterface[]
   multiSelect?: boolean
   dragSelection?: boolean
+
+  itemsDeletedSet: Record<string, boolean>
+  deletedTagCallback: Function
+  deletedTagRecverCallback: Function
 }
 
 const props = withDefaults(defineProps<FileExplorerProps>(), {
   items: () => [],
   multiSelect: true,
-  dragSelection: false
+  dragSelection: false,
+
+  itemsDeletedSet: ()=>{return {} as Record<string, boolean>},
+  deletedTagCallback: (items :SelectedItem[])=> {},
+  deletedTagRecverCallback: (items :SelectedItem[])=> {}
 })
+
 
 const emit = defineEmits<{
   'select': [items: Array<{ index: number, data: PlayPathListInterface }>]
@@ -336,17 +347,6 @@ const scrollToItem = (index: number): void => {
   })
 }
 
-const formatSize = (bytes: number): string => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
-
-const formatDate = (date: string | Date): string => {
-  return new Date(date).toLocaleDateString()
-}
 
 // 在 setup 中添加右键菜单相关状态
 let showContextMenu = false
@@ -354,7 +354,6 @@ let contextMenuPosition = { x: 0, y: 0 }
 
 // 右键菜单处理
 const handleContextMenu = (e: MouseEvent, index: number): void => {
-  console.log("handleContextMenu========>>>")
   e.preventDefault()
   
   // 如果右键的项目不在选中列表中，先选中它
@@ -394,6 +393,13 @@ const handleContextMenuCommand = (commandId: string, items: SelectedItem[]): voi
     case 'delete':
       handleDeleteCommand(items)
       break
+    case 'deletedTag':
+      handleDeleteTagCommand(items)
+      props.deletedTagCallback(items);
+      break
+    case 'recoverDeletedTag':
+      props.deletedTagRecverCallback(items);
+      break;
     case 'properties':
       handlePropertiesCommand(items)
       break
@@ -430,6 +436,14 @@ const handleDeleteCommand = (items: SelectedItem[]): void => {
   if (confirm(`确定要删除 ${items.length} 个项目吗？`)) {
     // 实现删除逻辑
   }
+}
+
+const handleDeleteTagCommand = (items: SelectedItem[]): void => {
+  console.log('标记删除项目:', items)
+  // if (confirm(`确定要删除 ${items.length} 个项目吗？`)) {
+  //   // 实现删除逻辑
+  // }
+  
 }
 
 const handlePropertiesCommand = (items: SelectedItem[]): void => {
@@ -496,7 +510,7 @@ onMounted(() => {
   transition: all 0.15s ease;
   display: flex;
   align-items: center;
-  border: 2px solid transparent;
+  border: 2px dashed transparent;
   position: relative;
 }
 
@@ -505,7 +519,11 @@ onMounted(() => {
 }
 
 .file-item.selected {
+  border-color: #0078d4;
   background-color: rgba(0, 120, 212, 0.5);
+}
+.file-item.deleted-tag{
+  background-color: rgba(255, 0, 0, 0.5)!important;
 }
 
 .file-item.focused {
@@ -520,7 +538,7 @@ onMounted(() => {
   left: 1px;
   right: 1px;
   bottom: 1px;
-  border: 1px dashed #0078d4;
+  /* border: 1px dashed #0078d4; */
   border-radius: 3px;
   pointer-events: none;
 }

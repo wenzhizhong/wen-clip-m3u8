@@ -86,6 +86,13 @@ const defaultCommands: ContextMenuCommand[] = [
     disabled: false,
     type: 'normal'
   },
+  {
+    id: 'recoverDeletedTag',
+    label: '恢复删除标记',
+    icon: '✅',
+    disabled: false,
+    type: 'normal'
+  },
   // {
   //   id: 'open',
   //   label: '打开',

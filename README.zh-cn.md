@@ -17,3 +17,9 @@
 ## 构建
 
 要构建可分发的生产模式包，请使用 `wails build`。
+
+
+## 预览图
+![1.jpg](./docs/images/1.jpg)
+![2.jpg](./docs/images/2.jpg)
+![3.jpg](./docs/images/3.jpg)

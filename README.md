@@ -4,6 +4,7 @@
 ## About App
 This is a local m3u8 media clipper.
 
+
 ## About Wails
 
 This is the official Wails Vue-TS template.
@@ -21,3 +22,8 @@ to this in your browser, and you can call your Go code from devtools.
 ## Building
 
 To build a redistributable, production mode package, use `wails build`.
+
+## Preivew
+![1.jpg](./docs/images/1.jpg)
+![2.jpg](./docs/images/2.jpg)
+![3.jpg](./docs/images/3.jpg)

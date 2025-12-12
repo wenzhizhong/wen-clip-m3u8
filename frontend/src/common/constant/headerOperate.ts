@@ -15,5 +15,7 @@ export const operateType ={
   clear : "clear",
   open : "open",
   close : "close",
+  mergeSuc : "mergeSuccess",
+  reset : "reset", //重新编辑
 
 }

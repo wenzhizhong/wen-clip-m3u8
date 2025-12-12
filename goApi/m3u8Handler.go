@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"clipM3u8Media/goApi/common"
 	"context"
-	"crypto/md5"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -45,6 +44,7 @@ type M3u8Info = struct {
 	ExtKeyIv          string
 }
 
+// 命令执行错误
 type CommandError struct {
 	Cmd        string
 	ExitCode   int
@@ -112,7 +112,7 @@ func (a *M3u8Handler) doClearM3u8FileJob(path string) (result bool, err error) {
 	return
 }
 
-func (a *M3u8Handler) doMergeM3u8File(path string, finalMergeFileList []string) (result bool, err error) {
+func (a *M3u8Handler) doMergeM3u8File(path string, finalMergeFileList []string) (result interface{}, err error) {
 	if len(finalMergeFileList) == 0 {
 		return result, errors.New("没有可处理文件")
 	}
@@ -123,11 +123,12 @@ func (a *M3u8Handler) doMergeM3u8File(path string, finalMergeFileList []string) 
 
 	m3u8Dir := a.getM3u8Dir(path)
 	resultMp4Dir := filepath.Join(m3u8Dir, resultMp4PathName)
-	mergeFromFile := filepath.Join(resultMp4Dir, "mergeFromFile.txt")
-	hash := md5.Sum([]byte(path))
-	resultMp4FileName := hex.EncodeToString(hash[:]) + ".mp4"
+	resultMp4FileName := a.getPathFileName(path) + ".mp4"
 	resultMp4FileRelPath := filepath.Join(resultMp4PathName, resultMp4FileName)
 	resultMp4FileAbsPath := filepath.Join(resultMp4Dir, resultMp4FileName)
+
+	mergeFromFileRelPath := "mergeFromFile.txt"
+	mergeFromFileAbsPath := filepath.Join(m3u8Dir, mergeFromFileRelPath)
 
 	_, err = os.Stat(resultMp4Dir)
 	if err != nil && os.IsNotExist(err) {
@@ -136,25 +137,64 @@ func (a *M3u8Handler) doMergeM3u8File(path string, finalMergeFileList []string) 
 			return result, err
 		}
 	} else {
-		os.RemoveAll(mergeFromFile)
+		os.RemoveAll(mergeFromFileAbsPath)
 		os.RemoveAll(resultMp4FileAbsPath)
 	}
 
+	lines := ""
 	for _, v := range finalMergeFileList {
-		line := "file '" + v + "'\n"
-		err := os.WriteFile(mergeFromFile, []byte(line), os.ModePerm)
-		if err != nil {
-			return result, err
-		}
+		lines += "file '" + v + "'\n"
 	}
+	err = os.WriteFile(mergeFromFileAbsPath, []byte(strings.TrimSpace(lines)), os.ModePerm)
+	if err != nil {
+		return result, err
+	}
+
 	// ffmpeg -f concat -safe 0 -i list.txt -c copy output.mp4
-	// cmd := exec.Command("ffmpeg", "-f", "concat", "-safe", "0", "-i", mergeFromFile, "-c", "copy", filepath.Join(resultMp4Path, "result.mp4"))
-	cmd := exec.Command("ffmpeg", "-f", "concat", "-safe", "0", "-i", mergeFromFile, "-c", "copy", resultMp4FileRelPath)
+	fmt.Println("执行命令：", "ffmpeg", "-f", "concat", "-safe", "0", "-i", mergeFromFileRelPath, "-c", "copy", resultMp4FileRelPath, "\n  ")
+	cmd := exec.Command("ffmpeg", "-f", "concat", "-safe", "0", "-i", mergeFromFileRelPath, "-c", "copy", resultMp4FileRelPath)
+
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
+	cmd.Dir = m3u8Dir
 	err = cmd.Run()
 	if err != nil {
 		return result, err
+	}
+
+	// resultMp4FileNameInfo, err1 := os.Stat(resultMp4FileAbsPath)
+	// if err1 != nil {
+	// 	return result, err1
+	// }
+	videoInfo := &common.VideoInfo{}
+	videoInfo, err = common.GetVideoInfoJSON(resultMp4FileAbsPath)
+	if err != nil {
+		fmt.Println(err)
+		// return result, err
+	}
+	fmt.Println(videoInfo)
+
+	playPathList := []map[string]interface{}{
+		{
+			"path":  resultMp4FileRelPath,
+			"name":  resultMp4FileName,
+			"error": nil,
+		},
+	}
+	result = struct {
+		M3u8Info     M3u8Info
+		PlayPathList []map[string]interface{}
+		MergePath    string
+		M3u8Path     string
+		Name         string
+		VideoInfo    common.VideoInfo
+	}{
+		M3u8Info:     M3u8Info{},
+		PlayPathList: playPathList,
+		MergePath:    resultMp4FileAbsPath,
+		M3u8Path:     path,
+		Name:         resultMp4FileName,
+		VideoInfo:    *videoInfo,
 	}
 	return
 }
@@ -381,4 +421,8 @@ func (a *M3u8Handler) getM3u8ContentDir(path string) string {
 func (a *M3u8Handler) getSliceMp4Path(path string) string {
 	m3u8Dir := a.getM3u8Dir(path)
 	return filepath.Join(m3u8Dir, sliceMp4PathName)
+}
+
+func (a *M3u8Handler) getPathFileName(path string) string {
+	return filepath.Base(path)[:len(filepath.Base(path))-5]
 }

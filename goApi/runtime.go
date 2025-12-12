@@ -53,3 +53,15 @@ func (a *Runtime) OpenFileDialog(optionJson map[string]interface{}) (string, err
 
 	return runtime.OpenFileDialog(*a.Ctx, option)
 }
+func (b *Runtime) BeforeClose(ctx context.Context) (prevent bool) {
+	dialog, err := runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
+		Type:    runtime.QuestionDialog,
+		Title:   "退出?",
+		Message: "确认是否退出窗口?",
+	})
+
+	if err != nil {
+		return false
+	}
+	return dialog != "Yes"
+}

@@ -49,6 +49,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import type { FileItem, FileExplorerExpose, SelectedItem } from './file-explorer'
 import ContextMenu from './ContextMenu.vue'
+import { formatSize } from '../../common/utils/file'
 
 // Props 定义
 interface FileExplorerProps {
@@ -339,13 +340,14 @@ const scrollToItem = (index: number): void => {
   })
 }
 
-const formatSize = (bytes: number): string => {
-  if (bytes === 0) return '0 B'
-  const k = 1024
-  const sizes = ['B', 'KB', 'MB', 'GB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-}
+// const formatSize = (bytes: number): string => {
+//   if (bytes === 0) return '0 B'
+//   const k = 1024
+//   const sizes = ['B', 'KB', 'MB', 'GB']
+//   const i = Math.floor(Math.log(bytes) / Math.log(k))
+//   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+// }
+
 
 const formatDate = (date: string | Date): string => {
   return new Date(date).toLocaleDateString()
