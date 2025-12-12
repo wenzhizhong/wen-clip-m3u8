@@ -43,7 +43,7 @@ function  onSelectM3u8() {
   OpenFileDialog(options).then((m3u8Path)=> {
     if (m3u8Path && m3u8Path.length > 0) {
       console.log('用户选择了文件：', m3u8Path);
-      toast.warning("正在解析视频....", -1)
+      toast.warning("正在解析视频，请耐心等待....", -1)
 
       OpenM3u8File(m3u8Path).then((res :uploadM3u8Interface)=>{ 
         toast.success("解析完成", 10000)

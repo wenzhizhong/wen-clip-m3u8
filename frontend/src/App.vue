@@ -176,6 +176,7 @@ const initMergeSucCacheData = ()=>{
           </div>
           <VideoExplorer
             ref="explorerRef"
+            v-show="state.uploadM3u8Data.PlayPathList.length>0"
             :items="state.uploadM3u8Data.PlayPathList"
             :multi-select="true"
             class="explorer"
@@ -221,8 +222,31 @@ const initMergeSucCacheData = ()=>{
       padding: 0 10px;
       overflow: hidden;
       overflow-y: scroll;
+      position: relative;
+      &::after{ 
+        content: '.';
+        display: block;
+        position: absolute;
+        /* width: calc(100vw - 200px);
+        height: calc(100vh - 80px); */
+        top: 0;
+        bottom: 0;
+        right: 0;
+        left: 0;  
+        z-index: 0;
+        background-image: url("./assets/images/logo.png");
+        background-size: 200px;
+        background-repeat: no-repeat;
+        background-position: center;
+        opacity: 0.3;
+        filter:  grayscale(100%);
+      }
+      &>*{
+        z-index: 1;
+      }
       &>section{
         box-sizing: border-box;
+        position: relative;
         #selectFileName{
           box-sizing: border-box;
           text-align: left;

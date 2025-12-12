@@ -18,6 +18,7 @@ export default {
   data() {
     return {
       fileName: '',
+      controls: false,
     };
   },
   mounted() {},
@@ -48,11 +49,17 @@ export default {
         id: id,
         ref: id,
         class: ['my-video'],
-        controls: true,
+        controls: this.controls,
         src: url,
         width: '100%',
         onLoadedMetadata: () => {
           this.callback();
+        },
+        onMouseover: () => {
+          this.controls = true;
+        },
+        onMouseout: () => {
+          this.controls = false;
         }
       }) ,
       h('div', {
