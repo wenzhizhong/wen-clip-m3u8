@@ -51,7 +51,7 @@ function  onSelectM3u8() {
     
         res.M3u8Dir = getPathDir(m3u8Path)
         res.M3u8Path = m3u8Path
-        onReset();
+        doReset();
         props.callback(operateType.updoad, res)
       }).catch((error)=>{ 
         let msg = typeof error === 'string' ? error : error.message;
@@ -101,13 +101,15 @@ function onReset(){
     title: '温馨提示',
     content: '是否重新编辑?',
     onConfirm: () => {
-      localStorage.removeItem( deleteTagKey )
-      localStorage.removeItem( onSaveLockKey )
-      localStorage.removeItem( mergeSuccessKey )
-      
+      doReset()
       props.callback(operateType.reset, {})
     }
   })
+}
+function doReset(){ 
+    localStorage.removeItem( deleteTagKey )
+    localStorage.removeItem( onSaveLockKey )
+    localStorage.removeItem( mergeSuccessKey )
 }
 // onSave 
 function onSave(){ 

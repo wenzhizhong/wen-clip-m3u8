@@ -165,7 +165,7 @@ const initMergeSucCacheData = ()=>{
       <SidebarCmp :playPathList="state.uploadM3u8Data.PlayPathList"/>
       <main>
         <section>
-          <div id="selectFileName">
+          <div id="selectFileName" v-if="state.uploadM3u8Data.M3u8Path">
             <h3>{{ getPathFileName(state.uploadM3u8Data.M3u8Path) }}</h3>
           </div>
           <div id="successMergeBox" v-if="state.mergeSuccessData.PlayPathList.length">
