@@ -12,9 +12,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	sysRuntime "runtime"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 var sliceMp4PathName string = "sliceMp4Path"
@@ -54,7 +56,14 @@ type CommandError struct {
 
 // 检查ffmpeg是否安装
 func (a *M3u8Handler) CheckFfmpeg() error {
-	return exec.Command("ffmpeg", "-version").Run()
+	cmd := exec.Command("ffmpeg", "-version")
+	// 设置 Windows 下不显示窗口
+	if runtime.GOOS == "windows" {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			HideWindow: true,
+		}
+	}
+	return cmd.Run()
 }
 
 // 打开m3u8文件
@@ -76,10 +85,14 @@ func (a *M3u8Handler) doOpenM3u8File(path string) (data interface{}, err error) 
 	playPathList := make([]map[string]interface{}, 0)
 	content, err := a.checkM3u8File(path)
 	if err != nil {
+		_, file, line, _ := runtime.Caller(0)
+		common.LogToFile(path, fmt.Sprintf("%s:%d %v\n", file, line, err))
 		return data, err
 	}
 	m3u8Info, contentLines, err := a.parsekM3u8File(path, &content)
 	if err != nil {
+		_, file, line, _ := runtime.Caller(0)
+		common.LogToFile(path, fmt.Sprintf("%s:%d %v\n", file, line, err))
 		return data, err
 	}
 
@@ -153,6 +166,12 @@ func (a *M3u8Handler) doMergeM3u8File(path string, finalMergeFileList []string) 
 	// ffmpeg -f concat -safe 0 -i list.txt -c copy output.mp4
 	fmt.Println("执行命令：", "ffmpeg", "-f", "concat", "-safe", "0", "-i", mergeFromFileRelPath, "-c", "copy", resultMp4FileRelPath, "\n  ")
 	cmd := exec.Command("ffmpeg", "-f", "concat", "-safe", "0", "-i", mergeFromFileRelPath, "-c", "copy", resultMp4FileRelPath)
+
+	if runtime.GOOS == "windows" {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			HideWindow: true,
+		}
+	}
 
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
@@ -306,12 +325,18 @@ func (a *M3u8Handler) parsekM3u8File(path string, content *string) (m3u8Info *M3
 						m3u8Info.ExtList = append(m3u8Info.ExtList, nextLine)
 					} else {
 						var err3 error
+						var cmd *exec.Cmd
 						switch sysRuntime.GOOS {
 						case "windows":
-							err3 = exec.Command("cmd", "/C", "move", oldPath, newPath).Run()
+							cmd = exec.Command("cmd", "/C", "move", oldPath, newPath)
+							cmd.SysProcAttr = &syscall.SysProcAttr{
+								HideWindow: true,
+							}
 						default:
-							err3 = exec.Command("mv", oldPath, newPath).Run()
+							cmd = exec.Command("mv", oldPath, newPath)
 						}
+						err3 = cmd.Run()
+
 						if err3 != nil {
 							fmt.Println("复制分片失败：" + sliceFileName + "\n" + oldPath + "=>" + newPath + " \n")
 							fmt.Println(err3)
@@ -380,10 +405,26 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *M3u8Info, content
 			"-c", "copy",
 			m3u8VideoPath,
 		)
+
+		// 设置 Windows 下不显示窗口
+		if runtime.GOOS == "windows" {
+			cmd.SysProcAttr = &syscall.SysProcAttr{
+				HideWindow: true,
+			}
+		}
 		// 创建缓冲区用于捕获stderr
 		// 创建多重写入器：同时写入缓冲区和终端（便于实时查看）
 		var stderrBuf bytes.Buffer
-		stderrWriter := io.MultiWriter(&stderrBuf, os.Stderr)
+		var stderrWriter io.Writer
+
+		// 检查 stderr 是否可用
+		if _, err := os.Stderr.Stat(); err == nil {
+			// stderr 可用，创建多重写入器
+			stderrWriter = io.MultiWriter(&stderrBuf, os.Stderr)
+		} else {
+			// stderr 不可用，只写入缓冲区
+			stderrWriter = &stderrBuf
+		}
 		cmd.Stderr = stderrWriter
 		cmd.Stdout = os.Stdout // 标准输出通常直接输出到终端
 		cmd.Dir = m3u8Dir
@@ -401,6 +442,9 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *M3u8Info, content
 				cmdErr.ExitCode = -1
 			}
 			playPathListItem["error"] = cmdErr
+
+			_, file, line, _ := runtime.Caller(0)
+			common.LogToFile(path, fmt.Sprintf("%s:%d %v\n", file, line, err))
 			return
 		}
 		playPathList = append(playPathList, playPathListItem)

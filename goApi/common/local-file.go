@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"syscall"
 )
 
 // VideoInfo 结构体
@@ -61,6 +63,12 @@ func GetVideoInfoJSON(filePath string) (*VideoInfo, error) {
 		"-show_streams",
 		filePath)
 
+	// 设置 Windows 下不显示窗口
+	if runtime.GOOS == "windows" {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			HideWindow: true,
+		}
+	}
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
