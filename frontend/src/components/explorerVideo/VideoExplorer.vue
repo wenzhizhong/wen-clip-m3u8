@@ -23,6 +23,9 @@
       @click="handleItemClick($event, index)"
       @mousedown="handleMouseDown($event, index)"
       @contextmenu="handleContextMenu($event, index)"
+      :style="{
+        width: props.zoomNumber !=0 ? (280+props.zoomNumber) +'px' : '280px',
+      }"
     >
       <slot name="item" :item="item" :index="index" :selected="isSelected(index)">
         
@@ -57,7 +60,8 @@ interface FileExplorerProps {
 
   itemsDeletedSet: Record<string, boolean>
   deletedTagCallback: Function
-  deletedTagRecverCallback: Function
+  deletedTagRecverCallback: Function,
+  zoomNumber?: number,
 }
 
 const props = withDefaults(defineProps<FileExplorerProps>(), {
@@ -67,7 +71,8 @@ const props = withDefaults(defineProps<FileExplorerProps>(), {
 
   itemsDeletedSet: ()=>{return {} as Record<string, boolean>},
   deletedTagCallback: (items :SelectedItem[])=> {},
-  deletedTagRecverCallback: (items :SelectedItem[])=> {}
+  deletedTagRecverCallback: (items :SelectedItem[])=> {},
+  zoomNumber : 0
 })
 
 
@@ -502,7 +507,7 @@ onMounted(() => {
 }
 
 .file-item {
-  width: 280px;
+  /* width: 280px; */
   padding: 8px 12px;
   margin: 0 0 20px 0;
   cursor: pointer;

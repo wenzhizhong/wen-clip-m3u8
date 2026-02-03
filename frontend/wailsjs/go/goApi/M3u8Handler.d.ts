@@ -5,6 +5,8 @@ export function CheckFfmpeg():Promise<void>;
 
 export function ClearM3u8FileJob(arg1:string):Promise<boolean>;
 
+export function DeleteM3u8Source(arg1:string):Promise<any>;
+
 export function MergeM3u8File(arg1:string,arg2:Array<string>):Promise<any>;
 
 export function OpenM3u8File(arg1:string):Promise<any>;

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"clipM3u8Media/goApi/common"
 	"context"
+	"crypto/md5"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -79,6 +80,11 @@ func (a *M3u8Handler) ClearM3u8FileJob(path string) (data bool, err error) {
 // 合并每个已经生成m3u8任务文件
 func (a *M3u8Handler) MergeM3u8File(path string, finalMergeFileList []string) (data interface{}, err error) {
 	return a.doMergeM3u8File(path, finalMergeFileList)
+}
+
+// 删除当前作业数据源
+func (a *M3u8Handler) DeleteM3u8Source(path string) (data interface{}, err error) {
+	return a.doDeleteM3u8Source(path)
 }
 
 func (a *M3u8Handler) doOpenM3u8File(path string) (data interface{}, err error) {
@@ -214,6 +220,36 @@ func (a *M3u8Handler) doMergeM3u8File(path string, finalMergeFileList []string) 
 		M3u8Path:     path,
 		Name:         resultMp4FileName,
 		VideoInfo:    *videoInfo,
+	}
+	return
+}
+
+// 删除作业数据源
+func (a *M3u8Handler) doDeleteM3u8Source(path string) (result interface{}, err error) {
+	result = struct {
+		Code int
+	}{
+		Code: 1,
+	}
+
+	_, err = a.checkM3u8File(path)
+	if err != nil {
+		return result, err
+	}
+
+	m3u8ContentDir := a.getM3u8ContentDir(path)
+	err = os.RemoveAll(m3u8ContentDir)
+	if err != nil {
+		return result, err
+	}
+	err = os.RemoveAll(path)
+	if err != nil {
+		return result, err
+	}
+	result = struct {
+		Code int
+	}{
+		Code: 0,
 	}
 	return
 }
@@ -381,7 +417,8 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *M3u8Info, content
 	for i := 0; i < len(listSlice); i++ {
 		sliceNameArr := strings.Split(listSlice[i], "/")
 		sliceName := sliceNameArr[len(sliceNameArr)-1] + ".mp4"
-		m3u8VideoPath := sliceMp4PathName + "/" + sliceName
+		// m3u8VideoPath := sliceMp4PathName + "/" + sliceName
+		m3u8VideoPath := filepath.Join(tmpSliceMp4Path, sliceName)
 
 		playPathListItem := map[string]interface{}{
 			"name":  sliceName,
@@ -464,7 +501,9 @@ func (a *M3u8Handler) getM3u8ContentDir(path string) string {
 
 func (a *M3u8Handler) getSliceMp4Path(path string) string {
 	m3u8Dir := a.getM3u8Dir(path)
-	return filepath.Join(m3u8Dir, sliceMp4PathName)
+	uniqueName := string(md5.New().Sum([]byte(a.getPathFileName(path))))
+
+	return filepath.Join(m3u8Dir, sliceMp4PathName, uniqueName)
 }
 
 func (a *M3u8Handler) getPathFileName(path string) string {

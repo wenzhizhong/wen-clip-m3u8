@@ -10,6 +10,10 @@ export function ClearM3u8FileJob(arg1) {
   return window['go']['goApi']['M3u8Handler']['ClearM3u8FileJob'](arg1);
 }
 
+export function DeleteM3u8Source(arg1) {
+  return window['go']['goApi']['M3u8Handler']['DeleteM3u8Source'](arg1);
+}
+
 export function MergeM3u8File(arg1, arg2) {
   return window['go']['goApi']['M3u8Handler']['MergeM3u8File'](arg1, arg2);
 }

@@ -17,5 +17,6 @@ export const operateType ={
   close : "close",
   mergeSuc : "mergeSuccess",
   reset : "reset", //重新编辑
+  zoom : "zoom",
 
 }

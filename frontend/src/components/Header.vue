@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import {reactive, ref, onMounted} from 'vue'
 import {MessageDialog, OpenFileDialog, } from '../../wailsjs/go/goApi/Runtime'
-import {CheckFfmpeg, ClearM3u8FileJob, MergeM3u8File, OpenM3u8File} from '../../wailsjs/go/goApi/M3u8Handler'
+import {CheckFfmpeg, ClearM3u8FileJob, MergeM3u8File, OpenM3u8File, DeleteM3u8Source} from '../../wailsjs/go/goApi/M3u8Handler'
 
 import {toast} from './toast.vue'
 import { confirm } from './confirm.vue';
@@ -17,8 +17,9 @@ const props = defineProps({
     default: (type :string, data :uploadM3u8Interface)=>{}
   },
 })
-const data = reactive({
-  name: "",
+const state = ref({
+  zoomNumber: 0,
+  zoomNumberOrigin: 0,
 })
 
 onMounted(() => {
@@ -87,6 +88,28 @@ function onClearM3u8(){
 
         
         
+      }
+    },
+    onCancel: () => {
+      // console.log("cancel")
+    }
+  })
+}
+function onDeleteSource(){
+  confirm.show({
+    title: '删除',
+    content: '是否删除当前数据源?',
+    onConfirm: () => {
+      let data = localStorage.getItem( uploadM3u8Key )
+      if (data) {
+        const uploadM3u8Data = JSON.parse(data) as uploadM3u8Interface
+        DeleteM3u8Source(uploadM3u8Data.M3u8Path).then((res)=>{ 
+          console.log(res)
+          toast.success("已删除", 10000)
+        }).catch((error)=>{ 
+          let msg = typeof error === 'string' ? error : error.message;
+          toast.error(msg, -1)
+        });
       }
     },
     onCancel: () => {
@@ -164,25 +187,66 @@ function onSave(){
     }
   })
 }
+// 缩放
+function zoomClice(type :number){
+  if (type === 1) {
+    state.value.zoomNumber = state.value.zoomNumber + 20
+  }else if (type === -1) {
+    state.value.zoomNumber = state.value.zoomNumber - 20
+  }else{
+    state.value.zoomNumber = 0
+  }
+  let data = {zoomNumber: state.value.zoomNumber} as uploadM3u8Interface
+  new Promise((resolve, reject) => { 
+    resolve(true)
+  }).then((res)=>{ 
+    props.callback(operateType.zoom, data )
+  })
+}
 
 </script>
 
 <template>
   <header >
-    <button class="c-btn c-btn-blain header-button" @click="onSelectM3u8" title="上传">
-      <img src="/src/assets/images/header/upload.png" alt="upload.png">
-    </button>
+    <span class="opt-item" @click="onSelectM3u8">
+      <img src="/src/assets/images/header/upload.png" alt="upload.png"> 
+      <span>上传</span>
+    </span>
 
-    <button class="c-btn c-btn-blain header-button space-wdith" title="保存并生成" @click="onSave">
-      <img src="/src/assets/images/header/save.png" alt="save.png">
-    </button>
-    <button class="c-btn c-btn-blain header-button" title="重新编辑" @click="onReset" >
-      <img src="/src/assets/images/header/reset.png" alt="reset.png">
-    </button>
+    <span class="opt-item" @click="onSave">
+      <img src="/src/assets/images/header/save.png" alt="save.png"> 
+      <span>生成</span>
+    </span>
 
-    <button class="c-btn c-btn-blain header-button" title="清空已生成数据" @click="onClearM3u8" >
-      <img src="/src/assets/images/header/clear.png" alt="clear.png">
-    </button>
+    <span class="opt-item" @click="onReset">
+      <img src="/src/assets/images/header/reset.png" alt="reset.png"> 
+      <span>重置</span>
+    </span>
+
+    <span class="opt-item" @click="onClearM3u8">
+      <img src="/src/assets/images/header/clear.png" alt="clear.png"> 
+      <span>清空临时文件</span>
+    </span>
+
+    <span class="opt-item" @click="onDeleteSource">
+      <img src="/src/assets/images/header/delete.png" alt="delete.png"> 
+      <span>删除源</span>
+    </span>
+
+    <span class="p-opt-item">
+      <span class="opt-item" @click="()=>{zoomClice(0)}">
+        <img src="/src/assets/images/header/ic_zoom_origin.png" alt="ic_zoom_origin.png"> 
+        <span>默认</span>
+      </span>
+      <span class="opt-item" @click="()=>{zoomClice(1)}">
+        <img src="/src/assets/images/header/ic_zoom_in.png" alt="ic_zoom_in.png"> 
+        <span>放大</span>
+      </span>
+      <span class="opt-item" @click="()=>{zoomClice(-1)}">
+        <img src="/src/assets/images/header/ic_zoom_out.png" alt="ic_zoom_out.png"> 
+        <span>缩小</span>
+      </span>
+    </span>
   </header>
 </template>
 
@@ -230,19 +294,29 @@ function onSave(){
     border-bottom: 1px solid rgba(0,0,0,0.2);
     
     display: flex;
-    button{
-      margin-right: 10px;
+    .p-opt-item{
+      display: flex;
+      margin: 0 100px;
     }
-    .header-button{
-      width: 36px;
-      height: 36px;
-      margin: 0;
-      margin-right: 10px;
-      padding: 0;
-      img{
-        width: 24px;
-        height: 24px;
+    .opt-item{
+      user-select: none;
+      display: flex;
+      height: 24px;
+      line-height: 24px;
+      align-items: center;
+      padding: 4px 10px;
+      transition: all 0.2s ease-in-out;
+      border-radius: 4px;
+      &:hover{
+        cursor: pointer;
+        background-color: #dae8ff;
       }
+      img{
+        margin-right: 4px;
+        width: 16px;
+        height: 16px;
+      }
+
     }
   }
 

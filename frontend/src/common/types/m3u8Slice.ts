@@ -3,7 +3,8 @@ export interface uploadM3u8Interface {
 	M3u8Dir: 			string // m3u8文件所在目录
 	M3u8Path: 		string // m3u8文件路径
   M3u8Info:     ParseM3u8SliceInterface,
-  PlayPathList: PlayPathListInterface[]
+  PlayPathList: PlayPathListInterface[],
+	zoomNumber ?: number
 }
 interface VideoInfoFormatInterface{
 	duration: string,

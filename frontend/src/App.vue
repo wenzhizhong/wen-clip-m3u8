@@ -27,6 +27,7 @@ const state = reactive({
 
   uploadM3u8Dir: '',
   playPathListDeletedTag: {} as Record<string, boolean>,
+  zoomNumber: 0,
 })
 onMounted(() => {
   Init()
@@ -64,7 +65,11 @@ const headerHeaderCallback = (type :string, data :any) => {
       break;
     case operateType.reset:
       window.location.reload()
-      console.log("============= window.location.reload()")
+      console.log("window.location.reload()===")
+      break;
+    case operateType.zoom:
+      data = data as uploadM3u8Interface
+      state.zoomNumber = data.zoomNumber || 0
       break;
     default:
       break;
@@ -187,6 +192,8 @@ const initMergeSucCacheData = ()=>{
             :itemsDeletedSet="state.playPathListDeletedTag"
             :deletedTagCallback="deletedTagCallback"
             :deletedTagRecverCallback="deletedTagRecverCallback"
+
+            :zoomNumber="state.zoomNumber"
           >
             <template #item="{ item, index, selected }">
               <div class="custom-item">
