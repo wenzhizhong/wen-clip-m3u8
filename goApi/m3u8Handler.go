@@ -2,6 +2,7 @@ package goApi
 
 import (
 	"bytes"
+	"clipM3u8Media/backend/apps/common/utils"
 	"clipM3u8Media/goApi/common"
 	"context"
 	"crypto/md5"
@@ -13,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	sysRuntime "runtime"
 	"strconv"
@@ -397,9 +399,13 @@ func (a *M3u8Handler) parsekM3u8File(path string, content *string) (m3u8Info *M3
 }
 
 // 获取每个m3u8分片视频列表
+
 func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *M3u8Info, contentLines *[]string) (playPathList []map[string]interface{}, err error) {
 	playPathList = make([]map[string]interface{}, 0)
+	tmpPlayPathMap := make(map[string]map[string]interface{})
 	listSlice := m3u8Info.ExtList
+	listSliceChunk := utils.ArrayChunk(listSlice, 50)
+	listSliceChunkLen := len(listSliceChunk)
 
 	m3u8Dir := a.getM3u8Dir(path)
 	tmpSliceMp4Path := a.getSliceMp4Path(path)
@@ -414,13 +420,52 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *M3u8Info, content
 	decryption_key := hex.EncodeToString(keyData)
 	decryption_iv := m3u8Info.ExtKeyIv
 
+	ch := make(chan []map[string]interface{}, listSliceChunkLen)
+	for i := 0; i < listSliceChunkLen; i++ {
+		go func() {
+			tmpPlayPathList := a.doGetM3u8SliceVideo(path, m3u8Info, contentLines, listSliceChunk[i], decryption_key, decryption_iv)
+			ch <- tmpPlayPathList
+		}()
+	}
+
+	for i := 0; i < listSliceChunkLen; i++ {
+		tmpPlayPathList := <-ch
+		for j := 0; j < len(tmpPlayPathList); j++ {
+			item := tmpPlayPathList[j]
+			sliceIndex := item["index"].(string)
+			tmpPlayPathMap[sliceIndex] = item
+		}
+	}
+	// tmpPlayPathName = utils.ArraySort(tmpPlayPathName, 1)
+	for i := 0; i < len(listSlice); i++ {
+		item := tmpPlayPathMap[fmt.Sprint(i)]
+		if item == nil {
+			continue
+		}
+		playPathList = append(playPathList, item)
+	}
+
+	fmt.Println("playPathList========\n", playPathList)
+	fmt.Println("listSliceChunkLen========\n", listSliceChunkLen)
+	return
+}
+
+func (a *M3u8Handler) doGetM3u8SliceVideo(path string, m3u8Info *M3u8Info, contentLines *[]string, listSlice []string, decryption_key, decryption_iv string) (playPathList []map[string]interface{}) {
+	playPathList = make([]map[string]interface{}, 0)
+	m3u8Dir := a.getM3u8Dir(path)
+	uniqueName := a.getPathMd5(path)
+
 	for i := 0; i < len(listSlice); i++ {
 		sliceNameArr := strings.Split(listSlice[i], "/")
-		sliceName := sliceNameArr[len(sliceNameArr)-1] + ".mp4"
+		sliceNameArrLen := len(sliceNameArr)
+		re := regexp.MustCompile(`[0-9]+`)
+		sliceIndex := re.FindString(sliceNameArr[sliceNameArrLen-1])
+		sliceName := sliceNameArr[sliceNameArrLen-1] + ".mp4"
 		// m3u8VideoPath := sliceMp4PathName + "/" + sliceName
-		m3u8VideoPath := filepath.Join(tmpSliceMp4Path, sliceName)
+		m3u8VideoPath := filepath.Join(sliceMp4PathName, uniqueName, sliceName)
 
 		playPathListItem := map[string]interface{}{
+			"index": sliceIndex,
 			"name":  sliceName,
 			"path":  m3u8VideoPath,
 			"error": nil,
@@ -465,7 +510,7 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *M3u8Info, content
 		cmd.Stderr = stderrWriter
 		cmd.Stdout = os.Stdout // 标准输出通常直接输出到终端
 		cmd.Dir = m3u8Dir
-		err = cmd.Run()
+		err := cmd.Run()
 		if err != nil {
 			cmdErr := &CommandError{
 				Cmd:        cmd.String(),
@@ -482,14 +527,14 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *M3u8Info, content
 
 			_, file, line, _ := runtime.Caller(0)
 			common.LogToFile(path, fmt.Sprintf("%s:%d %v\n", file, line, err))
+			playPathList = append(playPathList, playPathListItem)
 			return
 		}
 		playPathList = append(playPathList, playPathListItem)
 		// fmt.Println("m3u8VideoPath=", m3u8VideoPath)
 		// fmt.Println("m3u8Dir=", m3u8Dir)
 	}
-	fmt.Println("playPathList========\n", playPathList)
-	return
+	return playPathList
 }
 func (a *M3u8Handler) getM3u8Dir(path string) string {
 	return filepath.Dir(path)
@@ -501,9 +546,13 @@ func (a *M3u8Handler) getM3u8ContentDir(path string) string {
 
 func (a *M3u8Handler) getSliceMp4Path(path string) string {
 	m3u8Dir := a.getM3u8Dir(path)
-	uniqueName := string(md5.New().Sum([]byte(a.getPathFileName(path))))
+	uniqueName := a.getPathMd5(path)
 
 	return filepath.Join(m3u8Dir, sliceMp4PathName, uniqueName)
+}
+func (a *M3u8Handler) getPathMd5(path string) string {
+	uniqueName := md5.Sum([]byte(a.getPathFileName(path)))
+	return hex.EncodeToString(uniqueName[:])
 }
 
 func (a *M3u8Handler) getPathFileName(path string) string {

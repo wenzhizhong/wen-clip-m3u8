@@ -48,7 +48,7 @@ function  onSelectM3u8() {
 
       OpenM3u8File(m3u8Path).then((res :uploadM3u8Interface)=>{ 
         toast.success("解析完成", 10000)
-        // console.log( "res: uploadM3u8Interface=", res);
+        console.log( "res: uploadM3u8Interface=", res);
     
         res.M3u8Dir = getPathDir(m3u8Path)
         res.M3u8Path = m3u8Path
