@@ -10,6 +10,7 @@ import { operateType } from '../common/constant/headerOperate'
 import { getSystem } from '../common/utils/browser'
 import { deleteTagKey, mergeSuccessKey, onSaveLockKey, uploadM3u8Key } from '../common/constant/localStorageKey';
 import { getPathDir } from '../common/utils/path';
+import { LOCAL_FILE } from '../common/request/api';
 
 const props = defineProps({
   callback:{
@@ -40,6 +41,9 @@ function  onSelectM3u8() {
       { DisplayName: "图片文件", Pattern: "*.m3u8" },
     ]
   };
+
+  let storageKeys = [uploadM3u8Key, deleteTagKey, onSaveLockKey, mergeSuccessKey]
+  clearStorage(storageKeys)
 
   OpenFileDialog(options).then((m3u8Path)=> {
     if (m3u8Path && m3u8Path.length > 0) {
@@ -79,10 +83,12 @@ function onClearM3u8(){
       if (data) {
         const uploadM3u8Data = JSON.parse(data) as uploadM3u8Interface
         ClearM3u8FileJob(uploadM3u8Data.M3u8Path).then((res)=>{ 
-          localStorage.removeItem( uploadM3u8Key )
-          localStorage.removeItem( deleteTagKey )
-          localStorage.removeItem( onSaveLockKey )
-          localStorage.removeItem( mergeSuccessKey )
+          uploadM3u8Data.PlayPathList = []
+          localStorage.setItem( uploadM3u8Key , JSON.stringify(uploadM3u8Data) )
+
+          let storageKeys = [ deleteTagKey, onSaveLockKey]
+          clearStorage(storageKeys)
+
           props.callback(operateType.clear, uploadM3u8Data.M3u8Path)
           toast.success("已清空", 10000)
         }).catch((error)=>{ 
@@ -111,7 +117,15 @@ function onDeleteSource(){
         const uploadM3u8Data = JSON.parse(data) as uploadM3u8Interface
         DeleteM3u8Source(uploadM3u8Data.M3u8Path).then((res)=>{ 
           console.log(res)
-          toast.success("已删除", 10000)
+          ClearM3u8FileJob(uploadM3u8Data.M3u8Path).then((res)=>{
+            
+            let storageKeys = [ uploadM3u8Key]
+            clearStorage(storageKeys)
+            setTimeout(() => {
+              props.callback(operateType.clear, uploadM3u8Data.M3u8Path)
+            }, 2000);
+            toast.success("已删除原文件", 10000)
+          })
         }).catch((error)=>{ 
           let msg = typeof error === 'string' ? error : error.message;
           toast.error(msg, -1)
@@ -136,9 +150,8 @@ function onReset(){
   })
 }
 function doReset(){ 
-    localStorage.removeItem( deleteTagKey )
-    localStorage.removeItem( onSaveLockKey )
-    localStorage.removeItem( mergeSuccessKey )
+    let storageKeys = [ deleteTagKey, onSaveLockKey, mergeSuccessKey]
+    clearStorage(storageKeys)
 }
 // onSave 
 function onSave(){ 
@@ -183,17 +196,21 @@ function onSave(){
       toast.warning("正在合并生成视频....", -1)
 
       MergeM3u8File(sliceData.M3u8Path, resetM3u8SliceData).then((res :mergeSuccessInterface)=>{
-        sessionStorage.removeItem(onSaveLockKey)
+        let storageKeys = [onSaveLockKey]
+        clearStorage(storageKeys)
         toast.success("已生成", -1)
         
         res.M3u8Dir = getPathDir(sliceData.M3u8Path)
         res.M3u8Path = sliceData.M3u8Path
         if(res.PlayPathList && res.PlayPathList[0]){
+          let uploadM3u8Dir = getPathDir(sliceData.M3u8Path)
+          res.PlayPathList[0].path = LOCAL_FILE + '?path=' + encodeURIComponent(uploadM3u8Dir + '/' + res.PlayPathList[0].path)
           res.PlayPathList[0].cover_path = tmpCoverImgPath
         }
         props.callback(operateType.mergeSuc, res)
       }).catch((error)=>{ 
-        sessionStorage.removeItem(onSaveLockKey)
+        let storageKeys = [onSaveLockKey]
+        clearStorage(storageKeys)
 
         let msg = typeof error === 'string' ? error : error.message;
         toast.error(msg ||"合并视频失败", -1)
@@ -216,6 +233,12 @@ function zoomClice(type :number){
   }).then((res)=>{ 
     props.callback(operateType.zoom, data )
   })
+}
+
+function clearStorage(keys :string[]) { 
+  for (let i = 0; i < keys.length; i++) { 
+    localStorage.removeItem(keys[i])
+  }
 }
 
 </script>

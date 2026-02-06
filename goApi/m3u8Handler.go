@@ -122,12 +122,8 @@ func (a *M3u8Handler) doOpenM3u8File(path string) (data interface{}, err error) 
 }
 
 func (a *M3u8Handler) doClearM3u8FileJob(path string) (result bool, err error) {
-	_, err = a.CheckM3u8File(path)
-	if err != nil {
-		return result, err
-	}
-
 	tmpSliceMp4Path := a.getSliceMp4Path(path)
+	fmt.Println("tmpSliceMp4Path=" + tmpSliceMp4Path)
 	err = common.RemoveByWildcard(tmpSliceMp4Path, "*.mp4")
 	err = common.RemoveByWildcard(tmpSliceMp4Path, "*.jpg")
 	if err != nil {

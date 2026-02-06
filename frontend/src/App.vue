@@ -8,6 +8,7 @@ import SidebarCmp from './components/sidebar.vue'
 import MyVideo from './components/video.vue'
 import MyVideoInfo from './components/videoInfo.vue'
 import { getPathDir, getM3u8PathFileName } from './common/utils/path';
+import { LOCAL_FILE } from './common/request/api';
 
 
 const state = reactive({
@@ -175,7 +176,8 @@ const initMergeSucCacheData = ()=>{
           </div>
           <div id="successMergeBox" v-if="state.mergeSuccessData.PlayPathList.length">
             <div >
-              <VideoList :localPath="state.uploadM3u8Dir" :playPathList="state.mergeSuccessData.PlayPathList"/> 
+              <!-- <VideoList :localPath="state.uploadM3u8Dir" :playPathList="state.mergeSuccessData.PlayPathList"/>  -->
+              <video :src="state.mergeSuccessData.PlayPathList[0].path" controls="true" style="max-width: 100%;max-height: 750px;"></video>
             </div>
             <MyVideoInfo :merge-success-data="state.mergeSuccessData"></MyVideoInfo>
           </div>
