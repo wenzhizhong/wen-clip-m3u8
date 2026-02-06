@@ -3,10 +3,16 @@
 
 export function CheckFfmpeg():Promise<void>;
 
+export function CheckM3u8File(arg1:string):Promise<string>;
+
 export function ClearM3u8FileJob(arg1:string):Promise<boolean>;
 
 export function DeleteM3u8Source(arg1:string):Promise<any>;
 
+export function DoGetM3u8SliceVideo(arg1:string,arg2:any,arg3:Array<string>,arg4:string):Promise<Array<Record<string, any>>>;
+
 export function MergeM3u8File(arg1:string,arg2:Array<string>):Promise<any>;
 
 export function OpenM3u8File(arg1:string):Promise<any>;
+
+export function ParseM3u8File(arg1:string,arg2:any):Promise<any>;

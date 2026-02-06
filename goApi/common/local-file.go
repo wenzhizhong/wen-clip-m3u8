@@ -81,3 +81,30 @@ func GetVideoInfoJSON(filePath string) (*VideoInfo, error) {
 
 	return &info, nil
 }
+
+func GetSize(path string) (size int64, err error) {
+	size = 0
+	// 获取文件或者目录大小
+	var fileInfo os.FileInfo
+	fileInfo, err = os.Stat(path)
+	if err != nil {
+		return
+	}
+	if fileInfo.IsDir() {
+		files, err1 := ListByWildcard(path, "*")
+		if err1 != nil {
+			return size, err1
+		}
+		for _, filePath := range files {
+			tmpSize, err2 := GetSize(filePath)
+			if err2 != nil {
+				return size, err2
+			}
+			size += tmpSize
+		}
+	} else {
+		size += fileInfo.Size()
+	}
+
+	return size, nil
+}

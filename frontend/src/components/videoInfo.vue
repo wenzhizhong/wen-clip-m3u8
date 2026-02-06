@@ -28,7 +28,7 @@ const props = defineProps({
           <b>总时长：</b> <span>{{ formatDuration(Number(mergeSuccessData.VideoInfo?.format?.duration) ) }}</span>
         </li>
         <li>
-          <b>大小：</b> <span>{{ formatSize(Number(mergeSuccessData.VideoInfo?.format?.size || 0)) }}</span>
+          <b>大小：</b> <span>{{ formatSize(Number(mergeSuccessData.VideoInfo?.format?.size || 0)) }} &nbsp;（原视频大小：{{ formatSize(Number(mergeSuccessData.OriginVideoSize || 0)) }}）</span>
         </li>
         <li>
           <b>分辨率：</b> <span>{{ mergeSuccessData.VideoInfo?.streams?.[0]?.width || "" }} x {{ mergeSuccessData.VideoInfo?.streams?.[0]?.height || "" }}</span>

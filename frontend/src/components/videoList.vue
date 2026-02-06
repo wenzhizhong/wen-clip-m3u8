@@ -1,7 +1,7 @@
 <template>
   <section id="sliceMp4List">
     <template v-for="value in playPathList">
-      <MyVideo :localPath="localPath + '/' + value.path"/>
+      <MyVideo :localPath="localPath + '/' + value.path"  :thumbnailUrl="localPath + '/' + value.cover_path"/>
     </template>
   </section>
 </template>

@@ -24,6 +24,8 @@ import (
 
 var sliceMp4PathName string = "sliceMp4Path"
 var resultMp4PathName string = "resultMp4Path"
+var OptTypeVideo = "video"
+var OptTypeCoverImg = "coverImg"
 
 type M3u8Handler struct {
 	Ctx *context.Context
@@ -47,6 +49,8 @@ type M3u8Info = struct {
 	ExtKeyMethod      string
 	ExtKeyUri         string
 	ExtKeyIv          string
+	ExtKeyTrue        string
+	ExtKeyIvTrue      string
 }
 
 // 命令执行错误
@@ -91,13 +95,13 @@ func (a *M3u8Handler) DeleteM3u8Source(path string) (data interface{}, err error
 
 func (a *M3u8Handler) doOpenM3u8File(path string) (data interface{}, err error) {
 	playPathList := make([]map[string]interface{}, 0)
-	content, err := a.checkM3u8File(path)
+	content, err := a.CheckM3u8File(path)
 	if err != nil {
 		_, file, line, _ := runtime.Caller(0)
 		common.LogToFile(path, fmt.Sprintf("%s:%d %v\n", file, line, err))
 		return data, err
 	}
-	m3u8Info, contentLines, err := a.parsekM3u8File(path, &content)
+	m3u8Info, contentLines, err := a.ParseM3u8File(path, &content)
 	if err != nil {
 		_, file, line, _ := runtime.Caller(0)
 		common.LogToFile(path, fmt.Sprintf("%s:%d %v\n", file, line, err))
@@ -118,13 +122,14 @@ func (a *M3u8Handler) doOpenM3u8File(path string) (data interface{}, err error) 
 }
 
 func (a *M3u8Handler) doClearM3u8FileJob(path string) (result bool, err error) {
-	_, err = a.checkM3u8File(path)
+	_, err = a.CheckM3u8File(path)
 	if err != nil {
 		return result, err
 	}
 
 	tmpSliceMp4Path := a.getSliceMp4Path(path)
 	err = common.RemoveByWildcard(tmpSliceMp4Path, "*.mp4")
+	err = common.RemoveByWildcard(tmpSliceMp4Path, "*.jpg")
 	if err != nil {
 		return result, err
 	}
@@ -137,18 +142,19 @@ func (a *M3u8Handler) doMergeM3u8File(path string, finalMergeFileList []string) 
 	if len(finalMergeFileList) == 0 {
 		return result, errors.New("没有可处理文件")
 	}
-	_, err = a.checkM3u8File(path)
+	content := ""
+	content, err = a.CheckM3u8File(path)
 	if err != nil {
 		return result, err
 	}
 
 	m3u8Dir := a.getM3u8Dir(path)
 	resultMp4Dir := filepath.Join(m3u8Dir, resultMp4PathName)
-	resultMp4FileName := a.getPathFileName(path) + ".mp4"
+	resultMp4FileName := a.getM3u8PathFileName(path) + ".mp4"
 	resultMp4FileRelPath := filepath.Join(resultMp4PathName, resultMp4FileName)
 	resultMp4FileAbsPath := filepath.Join(resultMp4Dir, resultMp4FileName)
 
-	mergeFromFileRelPath := "mergeFromFile.txt"
+	mergeFromFileRelPath := "newN3u8File.m3u8"
 	mergeFromFileAbsPath := filepath.Join(m3u8Dir, mergeFromFileRelPath)
 
 	_, err = os.Stat(resultMp4Dir)
@@ -162,18 +168,21 @@ func (a *M3u8Handler) doMergeM3u8File(path string, finalMergeFileList []string) 
 		os.RemoveAll(resultMp4FileAbsPath)
 	}
 
-	lines := ""
-	for _, v := range finalMergeFileList {
-		lines += "file '" + v + "'\n"
+	originVideoSize, err1 := a.getM3u8ContentSize(path)
+	if err1 != nil {
+		return result, err1
 	}
-	err = os.WriteFile(mergeFromFileAbsPath, []byte(strings.TrimSpace(lines)), os.ModePerm)
+
+	err = a.generateNewM3u8File(mergeFromFileAbsPath, &content, finalMergeFileList)
 	if err != nil {
 		return result, err
 	}
 
 	// ffmpeg -f concat -safe 0 -i list.txt -c copy output.mp4
-	fmt.Println("执行命令：", "ffmpeg", "-f", "concat", "-safe", "0", "-i", mergeFromFileRelPath, "-c", "copy", resultMp4FileRelPath, "\n  ")
-	cmd := exec.Command("ffmpeg", "-f", "concat", "-safe", "0", "-i", mergeFromFileRelPath, "-c", "copy", resultMp4FileRelPath)
+	// fmt.Println("执行命令：", "ffmpeg", "-f", "concat", "-safe", "0", "-i", mergeFromFileRelPath, "-c", "copy", resultMp4FileRelPath, "\n  ")
+	// ffmpeg  -allowed_extensions ALL -i newN3u8File.m3u8 -c copy output.mp4
+	fmt.Println("执行命令：", "ffmpeg", "-allowed_extensions", "ALL", "-i", mergeFromFileRelPath, "-c", "copy", resultMp4FileRelPath, "\n  ")
+	cmd := exec.Command("ffmpeg", "-allowed_extensions", "ALL", "-i", mergeFromFileRelPath, "-c", "copy", resultMp4FileRelPath)
 
 	if runtime.GOOS == "windows" {
 		cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -209,19 +218,21 @@ func (a *M3u8Handler) doMergeM3u8File(path string, finalMergeFileList []string) 
 		},
 	}
 	result = struct {
-		M3u8Info     M3u8Info
-		PlayPathList []map[string]interface{}
-		MergePath    string
-		M3u8Path     string
-		Name         string
-		VideoInfo    common.VideoInfo
+		M3u8Info        M3u8Info
+		PlayPathList    []map[string]interface{}
+		MergePath       string
+		M3u8Path        string
+		Name            string
+		VideoInfo       common.VideoInfo
+		OriginVideoSize int64
 	}{
-		M3u8Info:     M3u8Info{},
-		PlayPathList: playPathList,
-		MergePath:    resultMp4FileAbsPath,
-		M3u8Path:     path,
-		Name:         resultMp4FileName,
-		VideoInfo:    *videoInfo,
+		M3u8Info:        M3u8Info{},
+		PlayPathList:    playPathList,
+		MergePath:       resultMp4FileAbsPath,
+		M3u8Path:        path,
+		Name:            resultMp4FileName,
+		VideoInfo:       *videoInfo,
+		OriginVideoSize: originVideoSize,
 	}
 	return
 }
@@ -234,7 +245,7 @@ func (a *M3u8Handler) doDeleteM3u8Source(path string) (result interface{}, err e
 		Code: 1,
 	}
 
-	_, err = a.checkM3u8File(path)
+	_, err = a.CheckM3u8File(path)
 	if err != nil {
 		return result, err
 	}
@@ -257,7 +268,7 @@ func (a *M3u8Handler) doDeleteM3u8Source(path string) (result interface{}, err e
 }
 
 // 检测m3u8文件
-func (a *M3u8Handler) checkM3u8File(path string) (content string, err error) {
+func (a *M3u8Handler) CheckM3u8File(path string) (content string, err error) {
 	if path == "" {
 		return content, errors.New("请选择m3u8文件")
 	}
@@ -281,7 +292,7 @@ func (a *M3u8Handler) checkM3u8File(path string) (content string, err error) {
 }
 
 // 解析m3u8文件
-func (a *M3u8Handler) parsekM3u8File(path string, content *string) (m3u8Info *M3u8Info, contentLines []string, err error) {
+func (a *M3u8Handler) ParseM3u8File(path string, content *string) (m3u8Info *M3u8Info, contentLines []string, err error) {
 	m3u8ContentDir := a.getM3u8ContentDir(path)
 	contentLines = strings.Split(*content, "\n")
 	if !strings.Contains(contentLines[0], "EXTM3U") {
@@ -395,7 +406,15 @@ func (a *M3u8Handler) parsekM3u8File(path string, content *string) (m3u8Info *M3
 		return m3u8Info, contentLines, errors.New("m3u8视频分片不存在")
 	}
 
+	m3u8Dir := a.getM3u8Dir(path)
+	keyData, _ := ioutil.ReadFile(filepath.Join(m3u8Dir, m3u8Info.ExtKeyUri))
+	m3u8Info.ExtKeyTrue = hex.EncodeToString(keyData)
+	m3u8Info.ExtKeyIvTrue = m3u8Info.ExtKeyIv
+
 	return
+}
+func (a *M3u8Handler) getM3u8Dir(path string) string {
+	return filepath.Dir(path)
 }
 
 // 获取每个m3u8分片视频列表
@@ -407,7 +426,6 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *M3u8Info, content
 	listSliceChunk := utils.ArrayChunk(listSlice, 50)
 	listSliceChunkLen := len(listSliceChunk)
 
-	m3u8Dir := a.getM3u8Dir(path)
 	tmpSliceMp4Path := a.getSliceMp4Path(path)
 	if _, err1 := os.Stat(tmpSliceMp4Path); os.IsNotExist(err1) {
 		os.MkdirAll(tmpSliceMp4Path, os.ModePerm)
@@ -416,22 +434,23 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *M3u8Info, content
 		// fmt.Println("删除文件：" + tmpSliceMp4Path + "/*.mp4")
 	}
 
-	keyData, _ := ioutil.ReadFile(filepath.Join(m3u8Dir, m3u8Info.ExtKeyUri))
-	decryption_key := hex.EncodeToString(keyData)
-	decryption_iv := m3u8Info.ExtKeyIv
-
-	ch := make(chan []map[string]interface{}, listSliceChunkLen)
+	type M3u8SliceVideo = struct {
+		SliceVideo []map[string]interface{}
+		Error      error
+	}
+	ch := make(chan []M3u8SliceVideo, listSliceChunkLen)
 	for i := 0; i < listSliceChunkLen; i++ {
 		go func() {
-			tmpPlayPathList := a.doGetM3u8SliceVideo(path, m3u8Info, contentLines, listSliceChunk[i], decryption_key, decryption_iv)
-			ch <- tmpPlayPathList
+			tmpPlayPathList, err := a.DoGetM3u8SliceVideo(path, m3u8Info, listSliceChunk[i], OptTypeCoverImg)
+			ch <- []M3u8SliceVideo{{SliceVideo: tmpPlayPathList, Error: err}}
 		}()
 	}
 
 	for i := 0; i < listSliceChunkLen; i++ {
-		tmpPlayPathList := <-ch
-		for j := 0; j < len(tmpPlayPathList); j++ {
-			item := tmpPlayPathList[j]
+		tmpM3u8SliceVideo := <-ch
+		sliceVideoList := tmpM3u8SliceVideo[0].SliceVideo
+		for j := 0; j < len(sliceVideoList); j++ {
+			item := sliceVideoList[j]
 			sliceIndex := item["index"].(string)
 			tmpPlayPathMap[sliceIndex] = item
 		}
@@ -450,11 +469,14 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *M3u8Info, content
 	return
 }
 
-func (a *M3u8Handler) doGetM3u8SliceVideo(path string, m3u8Info *M3u8Info, contentLines *[]string, listSlice []string, decryption_key, decryption_iv string) (playPathList []map[string]interface{}) {
+func (a *M3u8Handler) DoGetM3u8SliceVideo(path string, m3u8Info *M3u8Info, listSlice []string, optType string) (playPathList []map[string]interface{}, err error) {
 	playPathList = make([]map[string]interface{}, 0)
 	m3u8Dir := a.getM3u8Dir(path)
-	uniqueName := a.getPathMd5(path)
+	uniqueName := a.getM3u8PathMd5(path)
 
+	if optType != OptTypeVideo && optType != OptTypeCoverImg {
+		return playPathList, errors.New("optType参数错误, 可选值：video, coverImg")
+	}
 	for i := 0; i < len(listSlice); i++ {
 		sliceNameArr := strings.Split(listSlice[i], "/")
 		sliceNameArrLen := len(sliceNameArr)
@@ -464,80 +486,179 @@ func (a *M3u8Handler) doGetM3u8SliceVideo(path string, m3u8Info *M3u8Info, conte
 		// m3u8VideoPath := sliceMp4PathName + "/" + sliceName
 		m3u8VideoPath := filepath.Join(sliceMp4PathName, uniqueName, sliceName)
 
+		// 定义封面图路径
+		coverImagePath := m3u8VideoPath + ".jpg"
+
 		playPathListItem := map[string]interface{}{
-			"index": sliceIndex,
-			"name":  sliceName,
-			"path":  m3u8VideoPath,
-			"error": nil,
+			"index":      sliceIndex,
+			"name":       sliceName,
+			"path":       m3u8VideoPath,
+			"cover_path": coverImagePath, // 添加封面图路径
+			"error":      nil,
 		}
+
+		videoExists := false
+		coverExists := false
+
 		if _, err := os.Stat(filepath.Join(m3u8Dir, m3u8VideoPath)); !os.IsNotExist(err) {
+			videoExists = true
+		}
+
+		if _, err := os.Stat(filepath.Join(m3u8Dir, coverImagePath)); !os.IsNotExist(err) {
+			coverExists = true
+		}
+
+		// 如果视频和封面都存在，则跳过
+		if videoExists && coverExists {
 			playPathList = append(playPathList, playPathListItem)
 			continue
 		}
 
-		// err = exec.Command("ffmpeg", params...).Run() //  ffmpeg -allowed_extensions ALL -i "file:index.m3u8" -c copy output.mp4
-		// err = exec.Command("ffmpeg", params2...).Run() // ffmpeg -decryption_key YOUR_KEY_HEX -decryption_iv YOUR_IV_HEX -i "crypto+file:index.m3u8_contents/0" -c copy segment_0_decrypted.ts
-		// ffmpegStr = "ffmpeg -decryption_key f7fd2cdfb2429a9646cb69234bebc9b3 -decryption_iv 1ef58f5c956b146218c8035d387f2728 -i \"crypto+file:index.m3u8_contents/0.ts\" -c copy \"sliceMp4PathName/0.ts.mp4\""
-		// cmd := exec.Command("cmd", "/C", ffmpegStr)
+		if optType == OptTypeVideo {
+			// err = exec.Command("ffmpeg", params...).Run() //  ffmpeg -allowed_extensions ALL -i "file:index.m3u8" -c copy output.mp4
+			// err = exec.Command("ffmpeg", params2...).Run() // ffmpeg -decryption_key YOUR_KEY_HEX -decryption_iv YOUR_IV_HEX -i "crypto+file:index.m3u8_contents/0" -c copy segment_0_decrypted.ts
+			// ffmpegStr = "ffmpeg -decryption_key f7fd2cdfb2429a9646cb69234bebc9b3 -decryption_iv 1ef58f5c956b146218c8035d387f2728 -i \"crypto+file:index.m3u8_contents/0.ts\" -c copy \"sliceMp4PathName/0.ts.mp4\""
+			// cmd := exec.Command("cmd", "/C", ffmpegStr)
 
-		cmd := exec.Command("ffmpeg",
-			"-decryption_key", decryption_key,
-			"-decryption_iv", decryption_iv,
-			"-i", "crypto+file:"+listSlice[i],
-			"-c", "copy",
-			m3u8VideoPath,
-		)
+			cmd := exec.Command("ffmpeg",
+				"-decryption_key", m3u8Info.ExtKeyTrue,
+				"-decryption_iv", m3u8Info.ExtKeyIvTrue,
+				"-i", "crypto+file:"+listSlice[i],
+				"-c", "copy",
+				m3u8VideoPath,
+			)
 
-		// 设置 Windows 下不显示窗口
-		if runtime.GOOS == "windows" {
-			cmd.SysProcAttr = &syscall.SysProcAttr{
-				HideWindow: true,
+			// 设置 Windows 下不显示窗口
+			if runtime.GOOS == "windows" {
+				cmd.SysProcAttr = &syscall.SysProcAttr{
+					HideWindow: true,
+				}
 			}
-		}
-		// 创建缓冲区用于捕获stderr
-		// 创建多重写入器：同时写入缓冲区和终端（便于实时查看）
-		var stderrBuf bytes.Buffer
-		var stderrWriter io.Writer
+			// 创建缓冲区用于捕获stderr
+			// 创建多重写入器：同时写入缓冲区和终端（便于实时查看）
+			var stderrBuf bytes.Buffer
+			var stderrWriter io.Writer
 
-		// 检查 stderr 是否可用
-		if _, err := os.Stderr.Stat(); err == nil {
-			// stderr 可用，创建多重写入器
-			stderrWriter = io.MultiWriter(&stderrBuf, os.Stderr)
-		} else {
-			// stderr 不可用，只写入缓冲区
-			stderrWriter = &stderrBuf
-		}
-		cmd.Stderr = stderrWriter
-		cmd.Stdout = os.Stdout // 标准输出通常直接输出到终端
-		cmd.Dir = m3u8Dir
-		err := cmd.Run()
-		if err != nil {
-			cmdErr := &CommandError{
-				Cmd:        cmd.String(),
-				Stderr:     stderrBuf.String(),
-				Underlying: err,
-			}
-			// 尝试获取退出码, 非退出错误（如命令未找到）
-			if exitErr, ok := err.(*exec.ExitError); ok {
-				cmdErr.ExitCode = exitErr.ExitCode()
+			// 检查 stderr 是否可用
+			if _, err := os.Stderr.Stat(); err == nil {
+				// stderr 可用，创建多重写入器
+				stderrWriter = io.MultiWriter(&stderrBuf, os.Stderr)
 			} else {
-				cmdErr.ExitCode = -1
+				// stderr 不可用，只写入缓冲区
+				stderrWriter = &stderrBuf
 			}
-			playPathListItem["error"] = cmdErr
+			cmd.Stderr = stderrWriter
+			cmd.Stdout = os.Stdout // 标准输出通常直接输出到终端
+			cmd.Dir = m3u8Dir
+			err = cmd.Run()
+			if err != nil {
+				cmdErr := &CommandError{
+					Cmd:        cmd.String(),
+					Stderr:     stderrBuf.String(),
+					Underlying: err,
+				}
+				// 尝试获取退出码, 非退出错误（如命令未找到）
+				if exitErr, ok := err.(*exec.ExitError); ok {
+					cmdErr.ExitCode = exitErr.ExitCode()
+				} else {
+					cmdErr.ExitCode = -1
+				}
+				playPathListItem["error"] = cmdErr
 
-			_, file, line, _ := runtime.Caller(0)
-			common.LogToFile(path, fmt.Sprintf("%s:%d %v\n", file, line, err))
-			playPathList = append(playPathList, playPathListItem)
-			return
+				_, file, line, _ := runtime.Caller(0)
+				common.LogToFile(path, fmt.Sprintf("%s:%d %v\n", file, line, err))
+				playPathList = append(playPathList, playPathListItem)
+				return
+			}
 		}
+
+		// 提取封面图
+		if optType == OptTypeCoverImg {
+
+			coverCmd := exec.Command("ffmpeg",
+				"-decryption_key", m3u8Info.ExtKeyTrue,
+				"-decryption_iv", m3u8Info.ExtKeyIvTrue,
+				"-i", "crypto+file:"+listSlice[i],
+				// "-vf", "thumbnail,scale=640:-1", // 使用thumbnail过滤器提取关键帧，并缩放到宽度640
+				// "-vf", "scale=640:-1",  // 只做缩放，去掉thumbnail过滤器
+				"-vframes", "1", // 只提取一帧
+				"-an", // 不处理音频
+				"-sn", // 不处理字幕
+				// "-q:v", "5", // 降低质量要求以提高速度
+				"-f", "image2", // 图像输出格式
+
+				// "-fast", "1", // 添加快速解码参数
+				// "-fflags", "+fastseek", // 添加快速解码参数
+				// "-map_metadata", "-1", // 跳过元数据处理
+
+				"-probesize", "32", // 减少探测数据
+				"-analyzeduration", "0", // 快速分析
+				"-avoid_negative_ts", "make_zero",
+				"-fflags", "+fastseek", // 快速seek
+				"-y", // 覆盖输出文件
+				coverImagePath,
+			)
+			if runtime.GOOS == "windows" {
+				coverCmd.SysProcAttr = &syscall.SysProcAttr{
+					HideWindow: true,
+				}
+			}
+
+			coverCmd.Dir = m3u8Dir
+			coverErr := coverCmd.Run()
+			if coverErr != nil {
+				fmt.Printf("提取封面图失败: %v\n", coverErr)
+				playPathListItem["cover_error"] = coverErr.Error() // 记录封面提取错误
+			}
+		}
+
 		playPathList = append(playPathList, playPathListItem)
 		// fmt.Println("m3u8VideoPath=", m3u8VideoPath)
 		// fmt.Println("m3u8Dir=", m3u8Dir)
 	}
-	return playPathList
+	return playPathList, nil
 }
-func (a *M3u8Handler) getM3u8Dir(path string) string {
-	return filepath.Dir(path)
+
+func (a *M3u8Handler) generateNewM3u8File(newPath string, content *string, finalMergeFileList []string) error {
+	finalMergeFileListLen := len(finalMergeFileList)
+	finalMergeFileMap := make(map[string]string)
+	for i := 0; i < len(finalMergeFileList); i++ {
+		item := finalMergeFileList[i]
+		item = strings.ReplaceAll(item, "\\", "/")
+		sliceName := strings.ReplaceAll(filepath.Base(item), ".mp4", "")
+		finalMergeFileMap[sliceName] = ""
+	}
+	fmt.Println("	==", finalMergeFileMap)
+
+	contentLines := strings.Split(*content, "\n")
+	newContentLines := make([]string, 0)
+	for i := 0; i < len(contentLines); i++ {
+		line := contentLines[i]
+		if strings.Contains(line, "EXTINF") {
+			i++
+			nextLine := strings.Trim(contentLines[i], "\r\n")
+			nextLine = nextLine + ".ts"
+			sliceName := filepath.Base(nextLine)
+			if finalMergeFileListLen > 0 {
+				if _, ok := finalMergeFileMap[sliceName]; ok {
+					newContentLines = append(newContentLines, line)
+					newContentLines = append(newContentLines, nextLine)
+				}
+			} else {
+				newContentLines = append(newContentLines, line)
+				newContentLines = append(newContentLines, nextLine)
+			}
+		} else {
+			newContentLines = append(newContentLines, line)
+		}
+	}
+	newContent := strings.Join(newContentLines, "\n")
+	err := os.WriteFile(newPath, []byte(newContent), os.ModePerm)
+	return err
+}
+func (a *M3u8Handler) getM3u8ContentSize(path string) (int64, error) {
+	dir := a.getM3u8ContentDir(path)
+	return common.GetSize(dir)
 }
 func (a *M3u8Handler) getM3u8ContentDir(path string) string {
 	path = path[:len(path)-5]
@@ -546,15 +667,15 @@ func (a *M3u8Handler) getM3u8ContentDir(path string) string {
 
 func (a *M3u8Handler) getSliceMp4Path(path string) string {
 	m3u8Dir := a.getM3u8Dir(path)
-	uniqueName := a.getPathMd5(path)
+	uniqueName := a.getM3u8PathMd5(path)
 
 	return filepath.Join(m3u8Dir, sliceMp4PathName, uniqueName)
 }
-func (a *M3u8Handler) getPathMd5(path string) string {
-	uniqueName := md5.Sum([]byte(a.getPathFileName(path)))
+func (a *M3u8Handler) getM3u8PathMd5(path string) string {
+	uniqueName := md5.Sum([]byte(a.getM3u8PathFileName(path)))
 	return hex.EncodeToString(uniqueName[:])
 }
 
-func (a *M3u8Handler) getPathFileName(path string) string {
+func (a *M3u8Handler) getM3u8PathFileName(path string) string {
 	return filepath.Base(path)[:len(filepath.Base(path))-5]
 }

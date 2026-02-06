@@ -16,7 +16,8 @@ type LocalFileController struct {
 // 播放本地文件
 func (c *LocalFileController) PlayLocalFile(ctx *gin.Context) {
 	path := ctx.Query("path")
-	content, err := c.LocalFileService.PlayLocalFile(path)
+	m3u8Path := ctx.Query("m3u8Path")
+	content, err := c.LocalFileService.PlayLocalFile(path, m3u8Path)
 
 	code := 200
 	msg := "success"

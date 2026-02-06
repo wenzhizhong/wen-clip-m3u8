@@ -67,11 +67,15 @@ function  onSelectM3u8() {
   });
 }
 function onClearM3u8(){
+  let data = localStorage.getItem( uploadM3u8Key )
+  if (!data || data === '' || data === '{}') {
+    toast.warning("没有可清空的数据" , 10000)
+    return
+  }
   confirm.show({
     title: '清空',
     content: '是否清空已生成数据?',
     onConfirm: () => {
-      let data = localStorage.getItem( uploadM3u8Key )
       if (data) {
         const uploadM3u8Data = JSON.parse(data) as uploadM3u8Interface
         ClearM3u8FileJob(uploadM3u8Data.M3u8Path).then((res)=>{ 
@@ -85,9 +89,6 @@ function onClearM3u8(){
           let msg = typeof error === 'string' ? error : error.message;
           toast.error(msg, -1)
         });
-
-        
-        
       }
     },
     onCancel: () => {
@@ -96,6 +97,11 @@ function onClearM3u8(){
   })
 }
 function onDeleteSource(){
+  let data = localStorage.getItem( uploadM3u8Key )
+  if (!data || data === '' || data === '{}') {
+    toast.warning("没有可删除的数据" , 10000)
+    return
+  }
   confirm.show({
     title: '删除',
     content: '是否删除当前数据源?',
@@ -136,6 +142,21 @@ function doReset(){
 }
 // onSave 
 function onSave(){ 
+  let tmpSliceData =  localStorage.getItem( uploadM3u8Key )
+  let tmpDeletedItemsMap =  localStorage.getItem( deleteTagKey )
+  let sliceData = tmpSliceData ? JSON.parse(tmpSliceData) as uploadM3u8Interface : {} as  uploadM3u8Interface
+  let deletedItemsMap = tmpDeletedItemsMap ? JSON.parse(tmpDeletedItemsMap)  : null
+
+  let resetM3u8SliceData :string[]= [];
+  if (!(sliceData && sliceData.PlayPathList && sliceData.PlayPathList.length > 0)) {
+    toast.error("没有可合并文件", -1)
+    return
+  }
+  if (!sliceData.M3u8Path){
+    toast.error("没有获取到m3u8文件路径，请先选择m3u8文件重新剪辑", -1)
+    return
+  }
+
   sessionStorage.getItem(onSaveLockKey)
   if (sessionStorage.getItem(onSaveLockKey)) {
     toast.error("请勿重复操作", -1)
@@ -146,24 +167,14 @@ function onSave(){
     content: '是否并合并生成视频?',
     onConfirm: () => {
 
-      let tmpSliceData =  localStorage.getItem( uploadM3u8Key )
-      let tmpDeletedItemsMap =  localStorage.getItem( deleteTagKey )
-      let sliceData = tmpSliceData ? JSON.parse(tmpSliceData) as uploadM3u8Interface : {} as  uploadM3u8Interface
-      let deletedItemsMap = tmpDeletedItemsMap ? JSON.parse(tmpDeletedItemsMap)  : null
-  
-      let resetM3u8SliceData :string[]= [];
-      if (!(sliceData && sliceData.PlayPathList && sliceData.PlayPathList.length > 0)) {
-        toast.error("没有可合并文件", -1)
-        return
-      }
-      if (!sliceData.M3u8Path){
-        toast.error("没有获取到m3u8文件路径，请先选择m3u8文件重新剪辑", -1)
-        return
-      }
+      let tmpCoverImgPath = ""
       for (let i = 0; i < sliceData.PlayPathList.length; i++) {
         const item = sliceData.PlayPathList[i];
         if (deletedItemsMap && deletedItemsMap[item.path]) {
           continue;
+        }
+        if (!tmpCoverImgPath) {
+          tmpCoverImgPath = item.cover_path
         }
         resetM3u8SliceData.push(item.path)
       }
@@ -177,6 +188,9 @@ function onSave(){
         
         res.M3u8Dir = getPathDir(sliceData.M3u8Path)
         res.M3u8Path = sliceData.M3u8Path
+        if(res.PlayPathList && res.PlayPathList[0]){
+          res.PlayPathList[0].cover_path = tmpCoverImgPath
+        }
         props.callback(operateType.mergeSuc, res)
       }).catch((error)=>{ 
         sessionStorage.removeItem(onSaveLockKey)
@@ -228,7 +242,7 @@ function zoomClice(type :number){
       <span>清空临时文件</span>
     </span>
 
-    <span class="opt-item" @click="onDeleteSource">
+    <span class="opt-item opt-item-danger" @click="onDeleteSource">
       <img src="/src/assets/images/header/delete.png" alt="delete.png"> 
       <span>删除源</span>
     </span>
@@ -309,7 +323,7 @@ function zoomClice(type :number){
       border-radius: 4px;
       &:hover{
         cursor: pointer;
-        background-color: #dae8ff;
+        background-color: #d5e5ff;
       }
       img{
         margin-right: 4px;
@@ -317,6 +331,15 @@ function zoomClice(type :number){
         height: 16px;
       }
 
+    }
+    .opt-item-danger{
+      background-color: #ffffff;
+      &:hover{
+        background-color: #ffe0e2;
+      }
+      span{
+        color: #df4d4f!important;
+      }
     }
   }
 

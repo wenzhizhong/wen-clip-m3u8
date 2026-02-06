@@ -7,7 +7,7 @@ import Header from './components/Header.vue'
 import SidebarCmp from './components/sidebar.vue'
 import MyVideo from './components/video.vue'
 import MyVideoInfo from './components/videoInfo.vue'
-import { getPathDir, getPathFileName } from './common/utils/path';
+import { getPathDir, getM3u8PathFileName } from './common/utils/path';
 
 
 const state = reactive({
@@ -171,7 +171,7 @@ const initMergeSucCacheData = ()=>{
       <main>
         <section>
           <div id="selectFileName" v-if="state.uploadM3u8Data.M3u8Path">
-            <h3>{{ getPathFileName(state.uploadM3u8Data.M3u8Path).replace(".m3u8", "") }}</h3>
+            <h3>{{ getM3u8PathFileName(state.uploadM3u8Data.M3u8Path).replace(".m3u8", "") }}</h3>
           </div>
           <div id="successMergeBox" v-if="state.mergeSuccessData.PlayPathList.length">
             <div >
@@ -197,7 +197,7 @@ const initMergeSucCacheData = ()=>{
           >
             <template #item="{ item, index, selected }">
               <div class="custom-item">
-                <MyVideo :localPath="state.uploadM3u8Dir + '/' + item.path"/>
+                <MyVideo :localPath="state.uploadM3u8Dir + '/' + item.path" :thumbnailUrl="state.uploadM3u8Dir + '/' + item.cover_path" :m3u8Path="state.uploadM3u8Data.M3u8Path"/>
               </div>
             </template>
           </VideoExplorer>
@@ -296,6 +296,7 @@ const initMergeSucCacheData = ()=>{
   display: flex;
   align-items: center;
   /* padding: 10px 12px; */
+  width: 100%;
   border-bottom: 1px solid #eee;
   transition: background-color 0.2s;
 }

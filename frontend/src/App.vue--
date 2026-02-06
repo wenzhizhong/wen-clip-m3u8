@@ -6,7 +6,7 @@ import { uploadM3u8Interface, ParseM3u8SliceInterface, PlayPathListInterface } f
 import Header from './components/Header.vue'
 import SidebarCmp from './components/sidebar.vue'
 import videoList from './components/videoList.vue'
-import { getPathDir, getPathFileName } from './common/utils/path';
+import { getPathDir, getM3u8PathFileName } from './common/utils/path';
 
 
 const state = reactive({
@@ -111,7 +111,7 @@ const formatDate = (date: string | Date): string => {
       <main>
         <section>
           <div id="selectFileName">
-            {{ getPathFileName(state.uploadM3u8Data.M3u8Path) }}
+            {{ getM3u8PathFileName(state.uploadM3u8Data.M3u8Path) }}
           </div>
           <!-- <videoList :localPath="state.uploadM3u8Dir" :playPathList="state.uploadM3u8Data.PlayPathList"/> -->
           <section>

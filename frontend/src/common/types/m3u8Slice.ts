@@ -36,6 +36,7 @@ export interface mergeSuccessInterface {
   M3u8Info:     ParseM3u8SliceInterface,
   PlayPathList: PlayPathListInterface[],
 	VideoInfo: VideoInfoInterface
+	OriginVideoSize: Number
 }
 
 export interface ParseM3u8SliceInterface {
@@ -53,5 +54,6 @@ export interface ParseM3u8SliceInterface {
 export interface PlayPathListInterface{
   name:string,
   path:string,
+  cover_path:string,
   error:any
 }
