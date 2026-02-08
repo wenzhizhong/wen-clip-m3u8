@@ -44,6 +44,7 @@ function  onSelectM3u8() {
 
   let storageKeys = [uploadM3u8Key, deleteTagKey, onSaveLockKey, mergeSuccessKey]
   clearStorage(storageKeys)
+  props.callback(operateType.mergeSuc, {})
 
   OpenFileDialog(options).then((m3u8Path)=> {
     if (m3u8Path && m3u8Path.length > 0) {
@@ -170,8 +171,8 @@ function onSave(){
     return
   }
 
-  sessionStorage.getItem(onSaveLockKey)
-  if (sessionStorage.getItem(onSaveLockKey)) {
+  localStorage.getItem(onSaveLockKey)
+  if (localStorage.getItem(onSaveLockKey)) {
     toast.error("请勿重复操作", -1)
     return
   }
@@ -192,7 +193,7 @@ function onSave(){
         resetM3u8SliceData.push(item.path)
       }
       
-      sessionStorage.setItem(onSaveLockKey, "1")
+      localStorage.setItem(onSaveLockKey, "1")
       toast.warning("正在合并生成视频....", -1)
 
       MergeM3u8File(sliceData.M3u8Path, resetM3u8SliceData).then((res :mergeSuccessInterface)=>{

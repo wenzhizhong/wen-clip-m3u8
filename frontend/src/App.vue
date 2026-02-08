@@ -8,7 +8,6 @@ import SidebarCmp from './components/sidebar.vue'
 import MyVideo from './components/video.vue'
 import MyVideoInfo from './components/videoInfo.vue'
 import { getPathDir, getM3u8PathFileName } from './common/utils/path';
-import { LOCAL_FILE } from './common/request/api';
 
 
 const state = reactive({
@@ -59,6 +58,8 @@ const headerHeaderCallback = (type :string, data :any) => {
       if (data && data.PlayPathList && data.PlayPathList.length){
         localStorage.setItem(mergeSuccessKey, JSON.stringify(data))
         setMergeSuccessData(data)
+      }else{
+        state.mergeSuccessData.PlayPathList = []
       }
       break;
     case operateType.clear:
