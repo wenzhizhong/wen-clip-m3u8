@@ -169,7 +169,7 @@ const initMergeSucCacheData = ()=>{
 
     <section id="workBox">
       <!-- sidebar -->
-      <SidebarCmp :playPathList="state.uploadM3u8Data.PlayPathList"/>
+      <SidebarCmp :playPathList="state.uploadM3u8Data.PlayPathList" :playPathListDeleted="state.playPathListDeletedTag"/>
       <main>
         <section>
           <div id="selectFileName" v-if="state.uploadM3u8Data.M3u8Path">

@@ -1,6 +1,10 @@
 <template>
   <div id="SidebarCmp">
-    <section v-for="value in playPathList" @click="gotoSlice">
+    <div class="sidebar-count">
+      <div>总分片：{{  playPathList.length }}</div>
+      <div>已标记删除： {{  Object.keys(playPathListDeleted).length }}</div>
+    </div>
+    <section v-for="value in playPathList" @click="gotoSlice" :class="playPathListDeleted[value.path]? 'deleted-item' : ''" :key="value.name">
       {{value.name}}
     </section>
   </div>
@@ -19,6 +23,12 @@ const props = defineProps({
     Type: Array as () => PlayPathListInterface[],
     default: ()=>{
       return [] as PlayPathListInterface[]
+    }
+  },
+  playPathListDeleted:{
+    Type: Object as () => Record<string, boolean>,
+    default: ()=>{
+      return {} as Record<string, boolean>
     }
   },
   callback: {
@@ -44,6 +54,11 @@ function gotoSlice(e:any) {
   border-right: solid 2px #c9c9c9;
   overflow: hidden;
   overflow-y: scroll;
+  .sidebar-count{
+    padding: 10px 0 10px 10px;
+    text-align: left;
+    border-bottom: solid 1px #ececec;
+  }
   &>section{
     cursor: pointer;
     box-sizing: border-box;
@@ -53,6 +68,13 @@ function gotoSlice(e:any) {
     transition: all .2s ease-in-out;
     &:hover{
       background-color: rgba(0, 149, 255, 0.3);
+    }
+    &.deleted-item{
+      background-color: rgba(255, 0, 0, 0.1);
+      border-bottom: solid 1px #c7c7c7;
+    }
+    &.deleted-item:hover{
+      background-color: rgba(255, 0, 0, 0.3);
     }
   }
 }
