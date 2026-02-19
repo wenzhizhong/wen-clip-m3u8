@@ -2,7 +2,7 @@
   <div id="SidebarCmp">
     <div class="sidebar-count">
       <div>总分片：{{  playPathList.length }}</div>
-      <div>已标记删除： {{  Object.keys(playPathListDeleted).length }}</div>
+      <div>已标记删除： {{ playPathList.length == 0? 0: Object.keys(playPathListDeleted).length }}</div>
     </div>
     <section v-for="value in playPathList" @click="gotoSlice" :class="playPathListDeleted[value.path]? 'deleted-item' : ''" :key="value.name">
       {{value.name}}

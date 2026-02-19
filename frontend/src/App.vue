@@ -135,6 +135,8 @@ const deletedTagRecverCallback = (items: SelectedItem[])=> {
         delete state.playPathListDeletedTag[items[i].data.path]
     }
     cacheDeleteTag()
+  }else {
+    state.playPathListDeletedTag = {}
   }
 }
 const cacheDeleteTag = ()=>{ 

@@ -120,7 +120,7 @@ function onDeleteSource(){
           console.log(res)
           ClearM3u8FileJob(uploadM3u8Data.M3u8Path).then((res)=>{
             
-            let storageKeys = [ uploadM3u8Key]
+            let storageKeys = [deleteTagKey, uploadM3u8Key]
             clearStorage(storageKeys)
             setTimeout(() => {
               props.callback(operateType.clear, uploadM3u8Data.M3u8Path)
