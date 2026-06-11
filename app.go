@@ -4,24 +4,28 @@ import (
 	"clipM3u8Media/backend"
 	"context"
 	"fmt"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // App struct
 type App struct {
-	ctx context.Context
+	app *application.App
 }
 
 // NewApp creates a new App application struct
-func NewApp() *App {
-	return &App{}
+func NewApp(app *application.App) *App {
+	return &App{app: app}
 }
 
 // startup is called when the app starts. The context is saved
 // so we can call the runtime methods
-func (a *App) startup(ctx context.Context) {
-	a.ctx = ctx
+func (a *App) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	// Web服务端
-	backend.Backend()
+	go func() {
+		backend.Backend()
+	}()
+	return nil
 }
 
 // Greet returns a greeting for the given name

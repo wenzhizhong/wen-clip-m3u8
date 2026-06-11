@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import {reactive} from 'vue'
-import {Greet} from '../../wailsjs/go/main/App'
+// import {Greet} from '../../bindings/clipM3u8Media/app'
 
 const data = reactive({
   name: "",
@@ -8,9 +8,9 @@ const data = reactive({
 })
 
 function greet() {
-  Greet(data.name).then(result => {
-    data.resultText = result
-  })
+  // Greet(data.name).then((result :string) => {
+  //   data.resultText = result
+  // })
 }
 
 </script>

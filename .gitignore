@@ -1,7 +1,9 @@
 build/bin
 node_modules
 frontend/dist
+frontend/.bindings*
 .history
 .vscode
 .idea
-
+.task
+bin

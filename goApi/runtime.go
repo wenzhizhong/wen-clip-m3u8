@@ -1,35 +1,64 @@
 package goApi
 
 import (
-	"context"
 	"fmt"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type Runtime struct {
-	Ctx *context.Context
+	App *application.App
 }
 
-func (a *Runtime) MessageDialog(msg, title string) (string, error) {
+func (a *Runtime) MessageDialog(msg, title string) {
 	if title == "" {
 		title = "提示"
 	}
-	return runtime.MessageDialog(*a.Ctx, runtime.MessageDialogOptions{
-		Title:         title,
-		Message:       msg,
-		Buttons:       []string{"取消", "确定"},
-		DefaultButton: "确定",
-	})
+	// return runtime.MessageDialog(*a.Ctx, runtime.MessageDialogOptions{
+	// 	Title:         title,
+	// 	Message:       msg,
+	// 	Buttons:       []string{"取消", "确定"},
+	// 	DefaultButton: "确定",
+	// })
+	a.App.Dialog.Info().
+		SetTitle(title).
+		SetMessage(msg).
+		Show()
 }
 
 // OpenFileDialog
 func (a *Runtime) OpenFileDialog(optionJson map[string]interface{}) (string, error) {
 
 	fmt.Println(optionJson)
-	option := runtime.OpenDialogOptions{
+	// option := runtime.OpenDialogOptions{
+	// 	Title: "选择文件",
+	// 	Filters: []runtime.FileFilter{
+	// 		{
+	// 			DisplayName: "所有文件",
+	// 			Pattern:     "*.*",
+	// 		},
+	// 	},
+	// }
+	// if optionJson != nil {
+	// 	if optionJson["Title"] != nil {
+	// 		option.Title = optionJson["Title"].(string)
+	// 	}
+	// 	if optionJson["Filters"] != nil {
+	// 		option.Filters = make([]runtime.FileFilter, 0)
+	// 		for _, filter := range optionJson["Filters"].([]interface{}) {
+	// 			option.Filters = append(option.Filters, runtime.FileFilter{
+	// 				DisplayName: filter.(map[string]interface{})["DisplayName"].(string),
+	// 				Pattern:     filter.(map[string]interface{})["Pattern"].(string),
+	// 			})
+	// 		}
+	// 	}
+	// }
+
+	// return runtime.OpenFileDialog(*a.Ctx, option)
+
+	option := &application.OpenFileDialogOptions{
 		Title: "选择文件",
-		Filters: []runtime.FileFilter{
+		Filters: []application.FileFilter{
 			{
 				DisplayName: "所有文件",
 				Pattern:     "*.*",
@@ -41,27 +70,13 @@ func (a *Runtime) OpenFileDialog(optionJson map[string]interface{}) (string, err
 			option.Title = optionJson["Title"].(string)
 		}
 		if optionJson["Filters"] != nil {
-			option.Filters = make([]runtime.FileFilter, 0)
+			option.Filters = make([]application.FileFilter, 0)
 			for _, filter := range optionJson["Filters"].([]interface{}) {
-				option.Filters = append(option.Filters, runtime.FileFilter{
+				option.Filters = append(option.Filters, application.FileFilter{
 					DisplayName: filter.(map[string]interface{})["DisplayName"].(string),
-					Pattern:     filter.(map[string]interface{})["Pattern"].(string),
 				})
 			}
 		}
 	}
-
-	return runtime.OpenFileDialog(*a.Ctx, option)
-}
-func (b *Runtime) BeforeClose(ctx context.Context) (prevent bool) {
-	dialog, err := runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
-		Type:    runtime.QuestionDialog,
-		Title:   "退出?",
-		Message: "确认是否退出窗口?",
-	})
-
-	if err != nil {
-		return false
-	}
-	return dialog != "Yes"
+	return a.App.Dialog.OpenFileWithOptions(option).PromptForSingleSelection()
 }

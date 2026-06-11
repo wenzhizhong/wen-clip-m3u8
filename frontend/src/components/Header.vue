@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import {reactive, ref, onMounted} from 'vue'
-import {MessageDialog, OpenFileDialog, } from '../../wailsjs/go/goApi/Runtime'
-import {CheckFfmpeg, ClearM3u8FileJob, MergeM3u8File, OpenM3u8File, DeleteM3u8Source} from '../../wailsjs/go/goApi/M3u8Handler'
+import {MessageDialog, OpenFileDialog, } from '../../bindings/clipM3u8Media/goApi/Runtime'
+import {CheckFfmpeg, ClearM3u8FileJob, MergeM3u8File, OpenM3u8File, DeleteM3u8Source} from '../../bindings/clipM3u8Media/goApi/M3u8Handler'
 
 import {toast} from './toast.vue'
 import { confirm } from './confirm.vue';
@@ -29,7 +29,7 @@ onMounted(() => {
     setTimeout(() => {
       toast.success("检测成功", 10000)
     }, 500);
-  }).catch(e => {
+  }).catch((e: any)=>{
     toast.error("请先安装ffmpeg" , 10000)
   })
 })
@@ -46,7 +46,7 @@ function  onSelectM3u8() {
   clearStorage(storageKeys)
   props.callback(operateType.mergeSuc, {})
 
-  OpenFileDialog(options).then((m3u8Path)=> {
+  OpenFileDialog(options).then((m3u8Path: string)=> {
     if (m3u8Path && m3u8Path.length > 0) {
       console.log('用户选择了文件：', m3u8Path);
       toast.warning("正在解析视频，请耐心等待....", -1)
@@ -59,14 +59,14 @@ function  onSelectM3u8() {
         res.M3u8Path = m3u8Path
         doReset();
         props.callback(operateType.updoad, res)
-      }).catch((error)=>{ 
+      }).catch((error: any)=>{ 
         let msg = typeof error === 'string' ? error : error.message;
         toast.error(msg, -1)
       });
     }else{
       toast.warning("已取消选择文件" , 10000)
     }
-  }).catch((error) => {
+  }).catch((error: any)=>{
     let msg = typeof error === 'string' ? error : error.message;
     toast.error(msg, -1)
   });
@@ -83,7 +83,7 @@ function onClearM3u8(){
     onConfirm: () => {
       if (data) {
         const uploadM3u8Data = JSON.parse(data) as uploadM3u8Interface
-        ClearM3u8FileJob(uploadM3u8Data.M3u8Path).then((res)=>{ 
+        ClearM3u8FileJob(uploadM3u8Data.M3u8Path).then((res :any)=>{ 
           uploadM3u8Data.PlayPathList = []
           localStorage.setItem( uploadM3u8Key , JSON.stringify(uploadM3u8Data) )
 
@@ -92,7 +92,7 @@ function onClearM3u8(){
 
           props.callback(operateType.clear, uploadM3u8Data.M3u8Path)
           toast.success("已清空", 10000)
-        }).catch((error)=>{ 
+        }).catch((error: any)=>{ 
           let msg = typeof error === 'string' ? error : error.message;
           toast.error(msg, -1)
         });
@@ -116,9 +116,9 @@ function onDeleteSource(){
       let data = localStorage.getItem( uploadM3u8Key )
       if (data) {
         const uploadM3u8Data = JSON.parse(data) as uploadM3u8Interface
-        DeleteM3u8Source(uploadM3u8Data.M3u8Path).then((res)=>{ 
+        DeleteM3u8Source(uploadM3u8Data.M3u8Path).then((res:any)=>{ 
           console.log(res)
-          ClearM3u8FileJob(uploadM3u8Data.M3u8Path).then((res)=>{
+          ClearM3u8FileJob(uploadM3u8Data.M3u8Path).then((res:any)=>{
             
             let storageKeys = [deleteTagKey, uploadM3u8Key]
             clearStorage(storageKeys)
@@ -127,7 +127,7 @@ function onDeleteSource(){
             }, 2000);
             toast.success("已删除原文件", 10000)
           })
-        }).catch((error)=>{ 
+        }).catch((error: any)=>{ 
           let msg = typeof error === 'string' ? error : error.message;
           toast.error(msg, -1)
         });
@@ -209,7 +209,7 @@ function onSave(){
           res.PlayPathList[0].cover_path = tmpCoverImgPath
         }
         props.callback(operateType.mergeSuc, res)
-      }).catch((error)=>{ 
+      }).catch((error: any)=>{ 
         let storageKeys = [onSaveLockKey]
         clearStorage(storageKeys)
 
