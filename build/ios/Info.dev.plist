@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>demo1.exe</string>
+    <string>clipM3u8Media.exe</string>
     <key>CFBundleIdentifier</key>
-    <string>com.example.demo1.dev</string>
+    <string>com.example.clipM3u8Media.dev</string>
     <key>CFBundleName</key>
     <string>My Product (Dev)</string>
     <key>CFBundleDisplayName</key>

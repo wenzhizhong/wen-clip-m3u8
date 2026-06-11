@@ -8,7 +8,7 @@
         AllowPromptForPassword="false">
     </Settings>
     <Installer
-        Path="demo1.exe"
+        Path="clipM3u8Media.exe"
         Arguments=""
         InstallLocation="C:\Program Files\My Company\My Product">
     </Installer>
@@ -18,17 +18,17 @@
         PublisherName="CN=My Company"
         PublisherDisplayName="My Company"
         Version="0.1.0.0"
-        PackageDescription="A demo1 application">
+        PackageDescription="A clipM3u8Media application">
         <Capabilities>
             <Capability Name="runFullTrust" />
             
         </Capabilities>
         <Applications>
             <Application
-                Id="com.example.demo1"
-                Description="A demo1 application"
+                Id="com.example.clipM3u8Media"
+                Description="A clipM3u8Media application"
                 DisplayName="My Product"
-                ExecutableName="demo1.exe"
+                ExecutableName="clipM3u8Media.exe"
                 EntryPoint="Windows.FullTrustApplication">
                 
             </Application>
@@ -43,11 +43,11 @@
             <Framework>false</Framework>
             <DisplayName>My Product</DisplayName>
             <PublisherDisplayName>My Company</PublisherDisplayName>
-            <Description>A demo1 application</Description>
+            <Description>A clipM3u8Media application</Description>
             <Logo>Assets\AppIcon.png</Logo>
         </Properties>
     </PackageInformation>
-    <SaveLocation PackagePath="demo1.msix" />
+    <SaveLocation PackagePath="clipM3u8Media.msix" />
     <PackageIntegrity>
         <CertificatePath></CertificatePath>
     </PackageIntegrity>

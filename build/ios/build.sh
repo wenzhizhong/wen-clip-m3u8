@@ -2,8 +2,8 @@
 set -e
 
 # Build configuration
-APP_NAME="demo1.exe"
-BUNDLE_ID="com.example.demo1"
+APP_NAME="clipM3u8Media.exe"
+BUNDLE_ID="com.example.clipM3u8Media"
 VERSION="0.1.0"
 BUILD_NUMBER="0.1.0"
 BUILD_DIR="build/ios"

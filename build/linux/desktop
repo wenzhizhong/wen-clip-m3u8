@@ -1,13 +1,13 @@
 [Desktop Entry]
 Version=1.0
 Name=My Product
-Comment=A demo1 application
+Comment=A clipM3u8Media application
 # The Exec line includes %u to pass the URL to the application
-Exec=/usr/local/bin/demo1.exe %u
+Exec=/usr/local/bin/clipM3u8Media.exe %u
 Terminal=false
 Type=Application
-Icon=demo1.exe
+Icon=clipM3u8Media.exe
 Categories=Utility;
-StartupWMClass=demo1.exe
+StartupWMClass=clipM3u8Media.exe
 
  

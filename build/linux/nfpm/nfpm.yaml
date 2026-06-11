@@ -3,26 +3,26 @@
 #
 # The lines below are called `modelines`. See `:help modeline`
 
-name: "demo1.exe"
+name: "clipM3u8Media.exe"
 arch: ${GOARCH}
 platform: "linux"
 version: "0.1.0"
 section: "default"
 priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
-description: "A demo1 application"
+description: "A clipM3u8Media application"
 vendor: "My Company"
 homepage: "https://wails.io"
 license: "MIT"
 release: "1"
 
 contents:
-  - src: "./bin/demo1.exe"
-    dst: "/usr/local/bin/demo1.exe"
+  - src: "./bin/clipM3u8Media.exe"
+    dst: "/usr/local/bin/clipM3u8Media.exe"
   - src: "./build/appicon.png"
-    dst: "/usr/share/icons/hicolor/128x128/apps/demo1.exe.png"
-  - src: "./build/linux/demo1.exe.desktop"
-    dst: "/usr/share/applications/demo1.exe.desktop"
+    dst: "/usr/share/icons/hicolor/128x128/apps/clipM3u8Media.exe.png"
+  - src: "./build/linux/clipM3u8Media.exe.desktop"
+    dst: "/usr/share/applications/clipM3u8Media.exe.desktop"
 
 # Default dependencies for the GTK4 + WebKitGTK 6.0 stack (Ubuntu 24.04+ / Debian 13+)
 depends:
