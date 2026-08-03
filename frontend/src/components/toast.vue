@@ -16,9 +16,9 @@ let toastContainer: HTMLElement | null = null;
 
 function createToastContainer() {
   if (!toastContainer) {
-    toastContainer = document.createElement('div');
+  toastContainer = document.createElement('div');
     toastContainer.id = 'toast-container';
-    document.body.appendChild(toastContainer);
+  document.body.appendChild(toastContainer);
   }
   return toastContainer;
 }
@@ -136,7 +136,8 @@ export default {
 
 <style>
 .toast {
-  height: 50px;
+  max-width: 80%;
+  min-height: 50px;
   line-height: 50px;
   position: fixed;
   top: 100px;
@@ -172,10 +173,8 @@ export default {
 .toast .text {
   display: inline-block;
   min-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   padding-left: 10px;
+  word-wrap:break-word; 
 }
 
 .toast .close {
