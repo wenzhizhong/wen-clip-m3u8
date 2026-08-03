@@ -509,6 +509,12 @@ func (a *M3u8Handler) DoGetM3u8SliceVideo(path string, m3u8Info *M3u8Info, listS
 			playPathList = append(playPathList, playPathListItem)
 			continue
 		}
+		commandArgs := []string{}
+		if m3u8Info.ExtKeyTrue != "" && m3u8Info.ExtKeyIvTrue != "" {
+			commandArgs = append(commandArgs, "-decryption_key", m3u8Info.ExtKeyTrue, "-decryption_iv", m3u8Info.ExtKeyIvTrue)
+			listSlice[i] = "crypto+file:" + listSlice[i]
+		}
+		commandArgs = append(commandArgs, "-i", listSlice[i])
 
 		if optType == OptTypeVideo {
 			// err = exec.Command("ffmpeg", params...).Run() //  ffmpeg -allowed_extensions ALL -i "file:index.m3u8" -c copy output.mp4
@@ -516,12 +522,14 @@ func (a *M3u8Handler) DoGetM3u8SliceVideo(path string, m3u8Info *M3u8Info, listS
 			// ffmpegStr = "ffmpeg -decryption_key f7fd2cdfb2429a9646cb69234bebc9b3 -decryption_iv 1ef58f5c956b146218c8035d387f2728 -i \"crypto+file:index.m3u8_contents/0.ts\" -c copy \"sliceMp4PathName/0.ts.mp4\""
 			// cmd := exec.Command("cmd", "/C", ffmpegStr)
 
+			commandArgs = append(commandArgs, "-c", "copy", m3u8VideoPath)
 			cmd := exec.Command("ffmpeg",
-				"-decryption_key", m3u8Info.ExtKeyTrue,
-				"-decryption_iv", m3u8Info.ExtKeyIvTrue,
-				"-i", "crypto+file:"+listSlice[i],
-				"-c", "copy",
-				m3u8VideoPath,
+				// "-decryption_key", m3u8Info.ExtKeyTrue,
+				// "-decryption_iv", m3u8Info.ExtKeyIvTrue,
+				// "-i", "crypto+file:"+listSlice[i],
+				// "-c", "copy",
+				// m3u8VideoPath,
+				commandArgs...,
 			)
 
 			// 设置 Windows 下不显示窗口
@@ -570,30 +578,32 @@ func (a *M3u8Handler) DoGetM3u8SliceVideo(path string, m3u8Info *M3u8Info, listS
 
 		// 提取封面图
 		if optType == OptTypeCoverImg {
-
+			commandArgs = append(commandArgs, "-vframes", "1", "-an", "-sn", "-f", "image2", "-probesize", "32", "-analyzeduration", "0", "-avoid_negative_ts", "make_zero", "-fflags", "+fastseek", "-y", coverImagePath)
 			coverCmd := exec.Command("ffmpeg",
-				"-decryption_key", m3u8Info.ExtKeyTrue,
-				"-decryption_iv", m3u8Info.ExtKeyIvTrue,
-				"-i", "crypto+file:"+listSlice[i],
-				// "-vf", "thumbnail,scale=640:-1", // 使用thumbnail过滤器提取关键帧，并缩放到宽度640
-				// "-vf", "scale=640:-1",  // 只做缩放，去掉thumbnail过滤器
-				"-vframes", "1", // 只提取一帧
-				"-an", // 不处理音频
-				"-sn", // 不处理字幕
-				// "-q:v", "5", // 降低质量要求以提高速度
-				"-f", "image2", // 图像输出格式
+				// "-decryption_key", m3u8Info.ExtKeyTrue,
+				// "-decryption_iv", m3u8Info.ExtKeyIvTrue,
+				// "-i", "crypto+file:"+listSlice[i],
+				// // "-vf", "thumbnail,scale=640:-1", // 使用thumbnail过滤器提取关键帧，并缩放到宽度640
+				// // "-vf", "scale=640:-1",  // 只做缩放，去掉thumbnail过滤器
+				// "-vframes", "1", // 只提取一帧
+				// "-an", // 不处理音频
+				// "-sn", // 不处理字幕
+				// // "-q:v", "5", // 降低质量要求以提高速度
+				// "-f", "image2", // 图像输出格式
 
-				// "-fast", "1", // 添加快速解码参数
-				// "-fflags", "+fastseek", // 添加快速解码参数
-				// "-map_metadata", "-1", // 跳过元数据处理
+				// // "-fast", "1", // 添加快速解码参数
+				// // "-fflags", "+fastseek", // 添加快速解码参数
+				// // "-map_metadata", "-1", // 跳过元数据处理
 
-				"-probesize", "32", // 减少探测数据
-				"-analyzeduration", "0", // 快速分析
-				"-avoid_negative_ts", "make_zero",
-				"-fflags", "+fastseek", // 快速seek
-				"-y", // 覆盖输出文件
-				coverImagePath,
+				// "-probesize", "32", // 减少探测数据
+				// "-analyzeduration", "0", // 快速分析
+				// "-avoid_negative_ts", "make_zero",
+				// "-fflags", "+fastseek", // 快速seek
+				// "-y", // 覆盖输出文件
+				// coverImagePath,
+				commandArgs...,
 			)
+
 			if runtime.GOOS == "windows" {
 				coverCmd.SysProcAttr = &syscall.SysProcAttr{
 					HideWindow: true,
