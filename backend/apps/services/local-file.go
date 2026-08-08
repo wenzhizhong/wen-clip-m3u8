@@ -2,6 +2,7 @@ package services
 
 import (
 	"clipM3u8Media/goApi"
+	"clipM3u8Media/goApi/common"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -30,7 +31,7 @@ func (s *LocalFileService) PlayLocalFile(path, m3u8Path string) (data *[]byte, e
 				return nil, err
 			}
 			// listSlice := m3u8Info.ExtList
-			sliceLen := len(m3u8Info.ExtList)
+			sliceLen := m3u8Info.ExtListLen
 			sliceIndex := 0
 			sliceIndexStr := "0"
 			sliceIndexStr, err = s.getSliceIndexFromPath(path)
@@ -45,8 +46,32 @@ func (s *LocalFileService) PlayLocalFile(path, m3u8Path string) (data *[]byte, e
 				return nil, errors.New("slice index is error")
 			}
 
-			curSlice := []string{m3u8Info.ExtList[sliceIndex]}
-			m3u8Handler.DoGetM3u8SliceVideo(m3u8Path, m3u8Info, curSlice, goApi.OptTypeVideo)
+			// curSlice := []string{m3u8Info.ExtList[sliceIndex]}
+			// m3u8Handler.DoGetM3u8SliceVideo(m3u8Path, m3u8Info, curSlice, goApi.OptTypeVideo)
+			isBreak := false
+			listMapKey := ""
+			curSlice := []common.ExtListItem{}
+			// startUsMap := make(map[string]int64)
+
+			for k, v := range m3u8Info.ExtList {
+				for k2 := range v {
+					sliceIndexStr2, _ := s.getSliceIndexFromPath(v[k2].Path)
+					if sliceIndexStr == sliceIndexStr2 {
+						isBreak = true
+						listMapKey = k
+						curSlice = append(curSlice, v[k2])
+
+						break
+					}
+				}
+				if isBreak {
+					break
+				}
+			}
+			if isBreak {
+				pathDto := m3u8Handler.GetGetAllPathDto(m3u8Path, listMapKey)
+				m3u8Handler.DoGetM3u8SliceVideoV2(m3u8Path, pathDto, curSlice, goApi.OptTypeVideo)
+			}
 		}
 	}
 	content, err := ioutil.ReadFile(path)

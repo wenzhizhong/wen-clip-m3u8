@@ -25,6 +25,33 @@ func ArrayChunk[T comparable](array []T, size int) [][]T {
 	return chunked
 }
 
+func ArrayDiff[T comparable](array1 []T, array2 []T, diffBoth bool) []T {
+	result := make([]T, 0)
+	map2 := make(map[T]bool, len(array2))
+	for _, v := range array2 {
+		map2[v] = true
+	}
+	for _, v1 := range array1 {
+		if !map2[v1] {
+			result = append(result, v1)
+		}
+	}
+	if diffBoth {
+		tmpResult := ArrayDiff(array2, array1, false)
+		if len(tmpResult) > 0 {
+			result = append(result, tmpResult...)
+		}
+	}
+	return result
+}
+func ArrayToMap[K comparable, V any, T any](array []T, keyFunc func(T) K, valueFunc func(T) V) map[K]V {
+	result := make(map[K]V)
+	for _, item := range array {
+		result[keyFunc(item)] = valueFunc(item)
+	}
+	return result
+}
+
 // ArraySort 对数组进行排序，支持升序和降序
 func ArraySort[T comparable](array []T, sortType int) []T {
 	// 创建副本避免修改原数组

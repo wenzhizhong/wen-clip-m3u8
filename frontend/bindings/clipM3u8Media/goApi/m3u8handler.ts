@@ -7,7 +7,7 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as $models from "./models.js";
+import * as common$0 from "./common/models.js";
 
 /**
  * 检查ffmpeg是否安装
@@ -37,10 +37,22 @@ export function DeleteM3u8Source(path: string): $CancellablePromise<any> {
     return $Call.ByID(1870563535, path);
 }
 
-export function DoGetM3u8SliceVideo(path: string, m3u8Info: $models.M3u8Info | null, listSlice: string[], optType: string): $CancellablePromise<{ [_ in string]?: any }[]> {
-    return $Call.ByID(2261405963, path, m3u8Info, listSlice, optType).then(($result: any) => {
+/**
+ * 			playPathList = append(playPathList, playPathListItem)
+ * 			// fmt.Println("m3u8VideoPath=", m3u8VideoPath)
+ * 			// fmt.Println("m3u8Dir=", m3u8Dir)
+ * 		}
+ * 		return playPathList, nil
+ * 	}
+ */
+export function DoGetM3u8SliceVideoV2(path: string, pathDto: common$0.AllPathDto | null, listSlice: common$0.ExtListItem[], optType: string): $CancellablePromise<{ [_ in string]?: any }[]> {
+    return $Call.ByID(310088911, path, pathDto, listSlice, optType).then(($result: any) => {
         return $$createType1($result);
     });
+}
+
+export function GetGetAllPathDto(path: string, ...listMapKey: string[]): $CancellablePromise<common$0.AllPathDto | null> {
+    return $Call.ByID(226839173, path, listMapKey);
 }
 
 /**
@@ -60,10 +72,10 @@ export function OpenM3u8File(path: string): $CancellablePromise<any> {
 /**
  * 解析m3u8文件
  */
-export function ParseM3u8File(path: string, content: string | null): $CancellablePromise<[$models.M3u8Info | null, string[]]> {
+export function ParseM3u8File(path: string, content: string | null): $CancellablePromise<[common$0.M3u8Info | null, string[]]> {
     return $Call.ByID(1951774624, path, content).then(($result: any) => {
-        $result[0] = $$createType4($result[0]);
-        $result[1] = $$createType2($result[1]);
+        $result[0] = $$createType5($result[0]);
+        $result[1] = $$createType6($result[1]);
         return $result;
     });
 }
@@ -72,7 +84,9 @@ export function ParseM3u8File(path: string, content: string | null): $Cancellabl
 const $$createType0 = $Create.Map($Create.Any, $Create.Any);
 const $$createType1 = $Create.Array($$createType0);
 const $$createType2 = $Create.Array($Create.Any);
-const $$createType3 = $Create.Struct({
-    "ExtList": $$createType2,
+const $$createType3 = $Create.Map($Create.Any, $$createType2);
+const $$createType4 = $Create.Struct({
+    "ExtList": $$createType3,
 });
-const $$createType4 = $Create.Nullable($$createType3);
+const $$createType5 = $Create.Nullable($$createType4);
+const $$createType6 = $Create.Array($Create.Any);

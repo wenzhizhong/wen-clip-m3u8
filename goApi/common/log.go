@@ -6,12 +6,13 @@ import (
 )
 
 func LogToFile(m3u8Path string, logContent string) (err error) {
-	logFilePath := filepath.Dir(m3u8Path) + "/" + "log.txt"
-	haldel, err := os.OpenFile(logFilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+	// logFilePath := filepath.Dir(m3u8Path) + "/" + "log.txt"
+	logFilePath := filepath.Join(filepath.Dir(m3u8Path), WorkPathName+"log.txt")
+	handel, err := os.OpenFile(logFilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		return err
 	}
-	defer haldel.Close()
-	_, err = haldel.WriteString(logContent)
+	defer handel.Close()
+	_, err = handel.WriteString(logContent)
 	return err
 }

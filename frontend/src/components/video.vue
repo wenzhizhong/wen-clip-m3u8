@@ -18,6 +18,10 @@ export default {
       type: String,
       default: ''
     },
+    time: {
+      type: String,
+      default: ''
+    },
     callback: {
       type: Function,
       default: () => {}
@@ -98,9 +102,10 @@ export default {
   },
   render() {
     let id = this.generateVideoId();
+    // console.log("this.localPath=", this.localPath)
+    // console.log("this.thumbnailUrl=", this.thumbnailUrl)
     let url = this.getSrcLink(this.localPath);
     let thumbnailUrl = this.getSrcLink(this.thumbnailUrl);
-    console.log("thumbnailUrl=", thumbnailUrl)
 
     // 根据 isVideoLoaded 状态决定渲染哪个元素
     let videoElement;
@@ -180,8 +185,16 @@ export default {
     }, [
       videoElement,
       h('div', {
-        class: ['my-video-name'],
-      }, this.fileName)
+        class: ['my-video-info'],
+      }, [
+        h('div', {
+          class: ['my-video-name'],
+        }, this.fileName),
+        h('div', {
+          class: ['my-video-time'],
+        }, this.time),
+      ]),
+     
     ]);
   }
 };
@@ -211,6 +224,23 @@ export default {
   
   .my-video-cover-img:hover {
     opacity: 0.9;
+  }
+  .my-video-info{
+    display: flex;
+    box-sizing: border-box;
+    padding: 2px 6px;
+    .my-video-name{
+      /* 自动伸缩 */
+      flex: 1;
+      text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .my-video-time{
+      /* 禁止伸缩 */
+      flex: 0;
+    }
   }
 }
 </style>

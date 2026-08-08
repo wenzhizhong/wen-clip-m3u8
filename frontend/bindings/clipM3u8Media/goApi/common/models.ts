@@ -5,6 +5,25 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
+export interface AllPathDto {
+    "SliceMp4Path": string;
+    "M3u8Dir": string;
+    "UniqueName": string;
+    "M3u8VideoBasePath": string;
+    "MergeEndPath": string;
+    "MergeDecPath": string;
+}
+
+export interface ExtListItem {
+    "Path": string;
+    "StartSec": number;
+    "StartTimeStr": string;
+    "ExtDuration": number;
+    "ExtKeyUri": string;
+    "ExtKeyTrue": string;
+    "ExtKeyIvTrue": string;
+}
+
 /**
  * #EXT-X-VERSION:3：HLS 协议版本号（常见为 3 或以上）。
  * #EXT-X-TARGETDURATION:10：所有媒体分片的最大持续时间（秒）。
@@ -20,11 +39,6 @@ export interface M3u8Info {
     "ExtTargetduration": number;
     "ExtMediaSequence": number;
     "ExtPlaylistType": string;
-    "ExtList": string[];
-    "ExtKey": string;
-    "ExtKeyMethod": string;
-    "ExtKeyUri": string;
-    "ExtKeyIv": string;
-    "ExtKeyTrue": string;
-    "ExtKeyIvTrue": string;
+    "ExtList": { [_ in string]?: ExtListItem[] };
+    "ExtListLen": number;
 }

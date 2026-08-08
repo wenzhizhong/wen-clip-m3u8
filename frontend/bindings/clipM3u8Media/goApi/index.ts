@@ -7,7 +7,3 @@ export {
     M3u8Handler,
     Runtime
 };
-
-export type {
-    M3u8Info
-} from "./models.js";

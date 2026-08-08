@@ -53,6 +53,7 @@ export interface ParseM3u8SliceInterface {
 
 export interface PlayPathListInterface{
   name:string,
+  time:string,
   path:string,
   cover_path:string,
   error:any

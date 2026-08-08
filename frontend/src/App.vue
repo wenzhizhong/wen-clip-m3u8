@@ -202,7 +202,7 @@ const initMergeSucCacheData = ()=>{
           >
             <template #item="{ item, index, selected }">
               <div class="custom-item">
-                <MyVideo :localPath="state.uploadM3u8Dir + '/' + item.path" :thumbnailUrl="state.uploadM3u8Dir + '/' + item.cover_path" :m3u8Path="state.uploadM3u8Data.M3u8Path"/>
+                <MyVideo :localPath="item.path" :thumbnailUrl="item.cover_path" :m3u8Path="state.uploadM3u8Data.M3u8Path" :time="item.time"/>
               </div>
             </template>
           </VideoExplorer>
