@@ -1,6 +1,9 @@
 <script lang="ts" setup>
 import {reactive, ref, onMounted} from 'vue'
+import {ToggleWindowByName, } from '../../bindings/clipM3u8Media/app'
+import {} from '../../bindings/clipM3u8Media/goApi/common'
 import {MessageDialog, OpenFileDialog, } from '../../bindings/clipM3u8Media/goApi/Runtime'
+import {GetAppPreUploadWindowName, } from '../../bindings/clipM3u8Media/goApi/getconstant'
 import {CheckFfmpeg, ClearM3u8FileJob, MergeM3u8File, OpenM3u8File, DeleteM3u8Source} from '../../bindings/clipM3u8Media/goApi/M3u8Handler'
 
 import {toast} from './toast.vue'
@@ -46,17 +49,17 @@ function  onSelectM3u8() {
   clearStorage(storageKeys)
   props.callback(operateType.mergeSuc, {})
 
-  OpenFileDialog(options).then((m3u8Path: string)=> {
+  OpenFileDialog(options).then((m3u8Path: string[])=> {
     if (m3u8Path && m3u8Path.length > 0) {
-      console.log('用户选择了文件：', m3u8Path);
+      console.log('用户选择了文件：', m3u8Path[0]);
       toast.warning("正在解析视频，请耐心等待....", -1)
 
-      OpenM3u8File(m3u8Path).then((res :uploadM3u8Interface)=>{ 
+      OpenM3u8File(m3u8Path[0]).then((res :uploadM3u8Interface)=>{ 
         toast.success("解析完成", 10000)
         console.log( "res: uploadM3u8Interface=", res);
     
-        res.M3u8Dir = getPathDir(m3u8Path)
-        res.M3u8Path = m3u8Path
+        res.M3u8Dir = getPathDir(m3u8Path[0])
+        res.M3u8Path = m3u8Path[0]
         doReset();
         props.callback(operateType.updoad, res)
       }).catch((error: any)=>{ 
@@ -70,6 +73,13 @@ function  onSelectM3u8() {
     let msg = typeof error === 'string' ? error : error.message;
     toast.error(msg, -1)
   });
+}
+function toggleWindowByName(status :boolean){
+  GetAppPreUploadWindowName().then((res :string)=>{
+    ToggleWindowByName(res, status).then((res :any)=>{
+      
+    })
+  })
 }
 function onClearM3u8(){
   let data = localStorage.getItem( uploadM3u8Key )
@@ -246,6 +256,11 @@ function clearStorage(keys :string[]) {
 
 <template>
   <header >
+    <span class="opt-item" @click="()=>{toggleWindowByName(true)}">
+      <img src="/src/assets/images/header/upload.png" alt="upload.png"> 
+      <span>预上传</span>
+    </span>
+
     <span class="opt-item" @click="onSelectM3u8">
       <img src="/src/assets/images/header/upload.png" alt="upload.png"> 
       <span>上传</span>

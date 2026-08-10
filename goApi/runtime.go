@@ -27,7 +27,7 @@ func (a *Runtime) MessageDialog(msg, title string) {
 }
 
 // OpenFileDialog
-func (a *Runtime) OpenFileDialog(optionJson map[string]interface{}) (string, error) {
+func (a *Runtime) OpenFileDialog(optionJson map[string]interface{}) ([]string, error) {
 
 	fmt.Println(optionJson)
 	// option := runtime.OpenDialogOptions{
@@ -65,9 +65,17 @@ func (a *Runtime) OpenFileDialog(optionJson map[string]interface{}) (string, err
 			},
 		},
 	}
+	multiSelect := false
 	if optionJson != nil {
 		if optionJson["Title"] != nil {
 			option.Title = optionJson["Title"].(string)
+		}
+		if optionJson["CanChooseFiles"] != nil {
+			multiSelect = optionJson["CanChooseFiles"].(bool)
+			option.CanChooseFiles = optionJson["CanChooseFiles"].(bool)
+		}
+		if optionJson["AllowsMultipleSelection"] != nil {
+			option.AllowsMultipleSelection = optionJson["AllowsMultipleSelection"].(bool)
 		}
 		if optionJson["Filters"] != nil {
 			option.Filters = make([]application.FileFilter, 0)
@@ -78,5 +86,9 @@ func (a *Runtime) OpenFileDialog(optionJson map[string]interface{}) (string, err
 			}
 		}
 	}
-	return a.App.Dialog.OpenFileWithOptions(option).PromptForSingleSelection()
+	if multiSelect {
+		return a.App.Dialog.OpenFileWithOptions(option).PromptForMultipleSelection()
+	}
+	result, err := a.App.Dialog.OpenFileWithOptions(option).PromptForSingleSelection()
+	return []string{result}, err
 }

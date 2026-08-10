@@ -12,6 +12,11 @@ export function MessageDialog(msg: string, title: string): $CancellablePromise<v
 /**
  * OpenFileDialog
  */
-export function OpenFileDialog(optionJson: { [_ in string]?: any }): $CancellablePromise<string> {
-    return $Call.ByID(1019573019, optionJson);
+export function OpenFileDialog(optionJson: { [_ in string]?: any }): $CancellablePromise<string[]> {
+    return $Call.ByID(1019573019, optionJson).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
+
+// Private type creation functions
+const $$createType0 = $Create.Array($Create.Any);

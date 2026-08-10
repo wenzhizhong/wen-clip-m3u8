@@ -670,8 +670,7 @@ func (a *M3u8Handler) DoGetM3u8SliceVideoV2(path string, pathDto *common.AllPath
 		sliceIndex, sliceName := a.getSliceIndexAndName(seg.Path)
 		m3u8VideoPath := filepath.Join(pathDto.M3u8Dir, sliceMp4PathName, pathDto.UniqueName, sliceName)
 
-		// fmt.Println(fmt.Sprintf("sliceName=%v, startSec=%v +  duration=%v = startUs=%v", sliceName, startSec, seg.ExtDuration, float64(tmpIncrStartSec)/1_000_000.0))
-		fmt.Println(fmt.Sprintf("sliceName=%v, startSec=%v, duration=%v ", sliceName, startSec, seg.ExtDuration))
+		fmt.Println(fmt.Sprintf("sliceName=%v, duration=%v, startSec=%v", sliceName, seg.ExtDuration, startSec))
 
 		// 定义封面图路径
 		coverImagePath := m3u8VideoPath + ".jpg"

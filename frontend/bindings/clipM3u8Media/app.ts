@@ -16,3 +16,7 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 export function Greet(name: string): $CancellablePromise<string> {
     return $Call.ByID(2659711170, name);
 }
+
+export function ToggleWindowByName(name: string, status: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3177404703, name, status);
+}

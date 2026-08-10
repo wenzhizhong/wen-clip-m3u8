@@ -13,12 +13,12 @@ interface ToastOptions {
 
 // 创建一个容器用于挂载 toast
 let toastContainer: HTMLElement | null = null;
-
+let toastTimer: number | null = null;
 function createToastContainer() {
   if (!toastContainer) {
-  toastContainer = document.createElement('div');
+    toastContainer = document.createElement('div');
     toastContainer.id = 'toast-container';
-  document.body.appendChild(toastContainer);
+    document.body.appendChild(toastContainer);
   }
   return toastContainer;
 }
@@ -45,8 +45,9 @@ function showToast(options: string | ToastOptions) {
     }
   });
   
+  if (toastTimer) clearTimeout(toastTimer);
   if (opts.time !== undefined && opts.time > 0){
-    setTimeout(() => {
+    toastTimer = setTimeout(() => {
       render(null, container);
     }, opts.time);
   }
