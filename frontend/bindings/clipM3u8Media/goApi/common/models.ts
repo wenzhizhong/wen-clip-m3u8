@@ -12,6 +12,8 @@ export interface AllPathDto {
     "M3u8VideoBasePath": string;
     "MergeEndPath": string;
     "MergeDecPath": string;
+    "M3u8VideoPathTpl": string;
+    "CoverImagePathTpl": string;
 }
 
 export interface ExtListItem {

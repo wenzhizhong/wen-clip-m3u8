@@ -881,9 +881,14 @@ func (a *M3u8Handler) getM3u8PathFileName(path string) string {
 	return filepath.Base(path)[:len(filepath.Base(path))-5]
 }
 func (a *M3u8Handler) mergeEncryptedSegments(m3u8VideoBasePath string, segments []common.ExtListItem, mergedEncPath string) error {
-	if _, err := os.Stat(mergedEncPath); os.IsExist(err) {
+	if _, err := os.Stat(mergedEncPath); !os.IsNotExist(err) {
+		fmt.Println("合并文件已存在，跳过")
 		return nil
 	}
+	if len(segments) == 0 {
+		return errors.New("no segments")
+	}
+
 	out, err := os.Create(mergedEncPath)
 	if err != nil {
 		return err
@@ -982,7 +987,8 @@ func (a *M3u8Handler) GetGetAllPathDto(path string, listMapKey ...string) *commo
 	m3u8Dir := a.getM3u8Dir(path)
 	uniqueName := a.getM3u8PathMd5(path)
 	m3u8VideoBasePath := filepath.Join(m3u8Dir, sliceMp4PathName, uniqueName)
-
+	m3u8VideoPathTpl := filepath.Join(m3u8VideoBasePath, common.M3u8VideoPathTpl)
+	coverImagePathTpl := filepath.Join(m3u8VideoBasePath, common.CoverImagePathTpl)
 	allPathDto := &common.AllPathDto{
 		SliceMp4Path:      tmpSliceMp4Path,
 		UniqueName:        uniqueName,
@@ -990,6 +996,8 @@ func (a *M3u8Handler) GetGetAllPathDto(path string, listMapKey ...string) *commo
 		M3u8VideoBasePath: m3u8VideoBasePath,
 		MergeEndPath:      "",
 		MergeDecPath:      "",
+		M3u8VideoPathTpl:  m3u8VideoPathTpl,
+		CoverImagePathTpl: coverImagePathTpl,
 	}
 	if len(listMapKey) > 0 {
 		mergeEndPath := filepath.Join(m3u8VideoBasePath, listMapKey[0]+"_merged_enc.ts")

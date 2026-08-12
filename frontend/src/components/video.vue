@@ -123,59 +123,25 @@ export default {
         onEnded: this.handleVideoEnded,
         // onMouseover: this.handleMouseOver,
         // onMouseout: this.handleMouseOut
-        
-        style: {
-          minHeight: '190px',
-        },
       });
     } else {
       // 渲染缩略图元素
       videoElement = h('div', {
-        class: ['my-video-cover-img'],
+        class: ['my-video-cover-box'],
         onClick: this.loadVideo, // 点击加载视频
         // onMouseover: this.handleMouseOver,
         // onMouseout: this.handleMouseOut,
-        style: {
-          width: '100%',
-          minHeight: '190px',
-          cursor: 'pointer',
-          position: 'relative',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center'
-        }
       }, [
         h('div', {
-          style: {
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center'
-          }
+          class: ['my-video-cover-img'],
         }, [
           h('img', {
             src: `${thumbnailUrl}`,
-            style: {
-              width: '100%',
-            }
           }, ''),
         ]),
         // 播放按钮
         h('div', {
-          style: {
-            width: '50px',
-            height: '50px',
-            lineHeight: '50px',
-            backgroundColor: 'rgba(0, 0, 0, 0.3)',
-            borderRadius: '50%',
-            color: 'white',
-            fontSize: '20px',
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)'
-            
-          }
+          class: ['my-video-play-icon'],
         }, '▶')
       ]);
     }
@@ -214,16 +180,48 @@ export default {
   transition: all 0.2s linear;
   
   .my-video {
+    min-height: 190px;
     max-width: 100%;
   }
   
-  .my-video-cover-img {
+  .my-video-cover-box {
     cursor: pointer;
     transition: opacity 0.3s ease;
+    
+    width: 100%;
+    min-height: 190px;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    .my-video-cover-img{
+      img{
+        width: 100%;
+      }
+    }
+    .my-video-play-icon{
+      width: 50px;
+      height: 50px;
+      line-height: 50px;
+      background-color: rgba(0, 0, 0, 1);
+      opacity: 0.2;
+      border-radius: 50%;
+      color: white;
+      font-size: 20px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      transition: all 0.3s ease;
+    }
   }
   
-  .my-video-cover-img:hover {
-    opacity: 0.9;
+  .my-video-cover-box:hover {
+    .my-video-play-icon{
+      opacity: 0.6;
+    }
+    /* opacity: 0.9; */
   }
   .my-video-info{
     display: flex;
