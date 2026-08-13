@@ -57,12 +57,12 @@ func (a *Runtime) OpenFileDialog(optionJson map[string]interface{}) ([]string, e
 	// return runtime.OpenFileDialog(*a.Ctx, option)
 
 	option := &application.OpenFileDialogOptions{
-		Title: "选择文件",
+		Title:   "选择文件",
 		Filters: []application.FileFilter{
-			{
-				DisplayName: "所有文件",
-				Pattern:     "*.*",
-			},
+			// {
+			// 	DisplayName: "所有文件",
+			// 	Pattern:     "*.*",
+			// },
 		},
 	}
 	multiSelect := false
@@ -85,6 +85,12 @@ func (a *Runtime) OpenFileDialog(optionJson map[string]interface{}) ([]string, e
 				})
 			}
 		}
+	}
+	if len(option.Filters) == 0 {
+		option.Filters = append(option.Filters, application.FileFilter{
+			DisplayName: "所有文件",
+			Pattern:     "*.*",
+		})
 	}
 	if multiSelect {
 		return a.App.Dialog.OpenFileWithOptions(option).PromptForMultipleSelection()

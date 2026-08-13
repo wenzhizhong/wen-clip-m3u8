@@ -41,7 +41,7 @@ function  onSelectM3u8() {
   const options = {
     Title: "请选择m3u8文件",
     Filters: [
-      { DisplayName: "图片文件", Pattern: "*.m3u8" },
+      { DisplayName: "m3u8文件", Pattern: "*.m3u8" },
     ]
   };
 

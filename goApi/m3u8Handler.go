@@ -311,6 +311,9 @@ func (a *M3u8Handler) ParseM3u8File(path string, content *string) (m3u8Info *com
 			} else if strings.Contains(line, "X-KEY") {
 				tmpKey, tmpKeyIv = a.getKeyAndVi(path, line)
 				extListMapKey = tmpKey
+				if strings.Contains(line, "NONE") {
+					extListMapKey = common.M3u8InfoConstant.ListMapDefKey
+				}
 			}
 			if strings.Contains(line, "EXTINF") {
 				beginVideoLine = true
@@ -429,10 +432,19 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *common.M3u8Info, 
 			if err != nil {
 				return
 			}
-			//整体解密合并文件
-			err = a.mergeDecryptedSegments(listSlice[0], pathDto.MergeEndPath, pathDto.MergeDecPath)
-			if err != nil {
-				return
+			// isVideoPlayable() , 如果合并后正常播放，则不进行解密
+			if a.isVideoPlayable(pathDto.MergeEndPath) {
+				fmt.Println("合并后正常播放，不进行解密=====")
+				err = os.Rename(pathDto.MergeEndPath, pathDto.MergeDecPath)
+				if err != nil {
+					return
+				}
+			} else {
+				//整体解密合并文件
+				err = a.mergeDecryptedSegments(listSlice[0], pathDto.MergeEndPath, pathDto.MergeDecPath)
+				if err != nil {
+					return
+				}
 			}
 		} else {
 			pathDto.MergeEndPath = pathDto.MergeDecPath
@@ -882,7 +894,7 @@ func (a *M3u8Handler) getM3u8PathFileName(path string) string {
 }
 func (a *M3u8Handler) mergeEncryptedSegments(m3u8VideoBasePath string, segments []common.ExtListItem, mergedEncPath string) error {
 	if _, err := os.Stat(mergedEncPath); !os.IsNotExist(err) {
-		fmt.Println("合并文件已存在，跳过")
+		fmt.Println("合并文件已存在，跳过：" + mergedEncPath)
 		return nil
 	}
 	if len(segments) == 0 {
@@ -909,7 +921,7 @@ func (a *M3u8Handler) mergeEncryptedSegments(m3u8VideoBasePath string, segments 
 }
 
 func (m *M3u8Handler) mergeDecryptedSegments(listItem common.ExtListItem, mergedEncPath, mergedDecPath string) error {
-	if _, err := os.Stat(mergedDecPath); os.IsExist(err) {
+	if _, err := os.Stat(mergedDecPath); !os.IsNotExist(err) {
 		return nil
 	}
 	decryptCmd := exec.Command("ffmpeg",
@@ -1006,4 +1018,27 @@ func (a *M3u8Handler) GetGetAllPathDto(path string, listMapKey ...string) *commo
 		allPathDto.MergeDecPath = mergeDecPath
 	}
 	return allPathDto
+}
+
+// isVideoPlayable 检测文件是否可正常播放（即含有可解码视频流）
+func (a *M3u8Handler) isVideoPlayable(filePath string) bool {
+	cmd := exec.Command("ffprobe",
+		"-v", "error",
+		"-select_streams", "v:0",
+		"-show_entries", "stream=codec_type",
+		"-of", "default=noprint_wrappers=1:nokey=1",
+		filePath,
+	)
+	var out bytes.Buffer
+	cmd.Stderr = &out // 捕获错误输出
+	output, err := cmd.Output()
+	if err != nil {
+		// 如果命令执行失败，或者输出非空报错，认为不可播放
+		return false
+	}
+	str := string(output)
+	if strings.Contains(str, "video") {
+		return true
+	}
+	return false
 }
