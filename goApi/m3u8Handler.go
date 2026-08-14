@@ -428,7 +428,7 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *common.M3u8Info, 
 
 		if !strings.HasPrefix(listMapKey, common.M3u8InfoConstant.ListMapDefKey) { // "none"
 			//整体合并
-			err = a.mergeEncryptedSegments(pathDto.M3u8Dir, listSlice, pathDto.MergeEndPath)
+			err = a.mergeEncryptedSegments(pathDto.M3u8Dir, listSlice, pathDto.MergeEndPath, 3)
 			if err != nil {
 				return
 			}
@@ -441,15 +441,17 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *common.M3u8Info, 
 				}
 			} else {
 				//整体解密合并文件
-				err = a.mergeDecryptedSegments(listSlice[0], pathDto.MergeEndPath, pathDto.MergeDecPath)
-				if err != nil {
+				err1, stdErr := a.mergeDecryptedSegments(listSlice[0], pathDto.MergeEndPath, pathDto.MergeDecPath)
+				if err1 != nil {
+					err = err1
+					common.LogToFile(path, fmt.Sprintf("合并解密失败：%v\n%v\n", err, stdErr.String()))
 					return
 				}
 			}
 		} else {
 			pathDto.MergeEndPath = pathDto.MergeDecPath
 			//整体合并
-			err = a.mergeEncryptedSegments(pathDto.M3u8Dir, listSlice, pathDto.MergeEndPath)
+			err = a.mergeEncryptedSegments(pathDto.M3u8Dir, listSlice, pathDto.MergeEndPath, 3)
 			if err != nil {
 				return
 			}
@@ -892,8 +894,10 @@ func (a *M3u8Handler) getM3u8PathMd5(path string) string {
 func (a *M3u8Handler) getM3u8PathFileName(path string) string {
 	return filepath.Base(path)[:len(filepath.Base(path))-5]
 }
-func (a *M3u8Handler) mergeEncryptedSegments(m3u8VideoBasePath string, segments []common.ExtListItem, mergedEncPath string) error {
-	if _, err := os.Stat(mergedEncPath); !os.IsNotExist(err) {
+func (a *M3u8Handler) mergeEncryptedSegments(m3u8VideoBasePath string, segments []common.ExtListItem, mergedEncPath string, reTry int) error {
+	fileInfo, err := os.Stat(mergedEncPath)
+	fileSize := fileInfo.Size()
+	if !os.IsNotExist(err) && fileSize > 0 {
 		fmt.Println("合并文件已存在，跳过：" + mergedEncPath)
 		return nil
 	}
@@ -917,12 +921,19 @@ func (a *M3u8Handler) mergeEncryptedSegments(m3u8VideoBasePath string, segments 
 		}
 		in.Close()
 	}
+	fileInfo, err = os.Stat(mergedEncPath)
+	if reTry > 0 && fileSize == 0 {
+		fmt.Println("合并文件错误，重试：" + strconv.Itoa(reTry))
+		os.Remove(mergedEncPath)
+		return a.mergeEncryptedSegments(m3u8VideoBasePath, segments, mergedEncPath, reTry-1)
+	}
 	return nil
 }
 
-func (m *M3u8Handler) mergeDecryptedSegments(listItem common.ExtListItem, mergedEncPath, mergedDecPath string) error {
+func (m *M3u8Handler) mergeDecryptedSegments(listItem common.ExtListItem, mergedEncPath, mergedDecPath string) (error, bytes.Buffer) {
+	var out bytes.Buffer
 	if _, err := os.Stat(mergedDecPath); !os.IsNotExist(err) {
-		return nil
+		return nil, out
 	}
 	decryptCmd := exec.Command("ffmpeg",
 		"-decryption_key", listItem.ExtKeyTrue,
@@ -931,10 +942,12 @@ func (m *M3u8Handler) mergeDecryptedSegments(listItem common.ExtListItem, merged
 		"-c", "copy",
 		"-y", mergedDecPath,
 	)
+
+	decryptCmd.Stderr = &out // 捕获错误输出
 	if err := decryptCmd.Run(); err != nil {
-		return err
+		return err, out
 	}
-	return nil
+	return nil, out
 }
 
 func (a *M3u8Handler) getDurationFromExtInf(extInfStr string) (float64, error) {

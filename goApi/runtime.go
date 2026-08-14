@@ -82,6 +82,7 @@ func (a *Runtime) OpenFileDialog(optionJson map[string]interface{}) ([]string, e
 			for _, filter := range optionJson["Filters"].([]interface{}) {
 				option.Filters = append(option.Filters, application.FileFilter{
 					DisplayName: filter.(map[string]interface{})["DisplayName"].(string),
+					Pattern:     filter.(map[string]interface{})["Pattern"].(string),
 				})
 			}
 		}
