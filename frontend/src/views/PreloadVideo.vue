@@ -95,17 +95,21 @@ function  onMultiSelectM3u8() {
           status: 0
         })
       }
+      let failNum = 0;
+      let successNum = 0;
       for (let i = 0; i < pathLen; i++) {
         await doOpenM3u8File(m3u8Paths[i]).then((res)=>{
+          successNum += 1;
           let res1 = res as uploadM3u8Interface;
-          toast.success(`解析成功${pathLen}/${i+1}`, 10000)
           pathLists.value[i].status = 1
         }).catch((error: any)=>{
+          failNum += 1;
           let msg = typeof error === 'string' ? error : error.message;
           toast.error(msg, -1)
           let item = JSON.parse(JSON.stringify(pathLists.value[i]))
           pathLists.value[i] = item as pathListsInterface
         })
+        toast.success(`解析: 总数${pathLen} 成功${successNum} 失败${failNum}`, 10000)
         setListPaths()
       }
     }else{
