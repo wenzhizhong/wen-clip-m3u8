@@ -896,7 +896,10 @@ func (a *M3u8Handler) getM3u8PathFileName(path string) string {
 }
 func (a *M3u8Handler) mergeEncryptedSegments(m3u8VideoBasePath string, segments []common.ExtListItem, mergedEncPath string, reTry int) error {
 	fileInfo, err := os.Stat(mergedEncPath)
-	fileSize := fileInfo.Size()
+	var fileSize int64 = 0
+	if err == nil && fileInfo != nil {
+		fileSize = fileInfo.Size()
+	}
 	if !os.IsNotExist(err) && fileSize > 0 {
 		fmt.Println("合并文件已存在，跳过：" + mergedEncPath)
 		return nil
@@ -922,6 +925,9 @@ func (a *M3u8Handler) mergeEncryptedSegments(m3u8VideoBasePath string, segments 
 		in.Close()
 	}
 	fileInfo, err = os.Stat(mergedEncPath)
+	if err == nil && fileInfo != nil {
+		fileSize = fileInfo.Size()
+	}
 	if reTry > 0 && fileSize == 0 {
 		fmt.Println("合并文件错误，重试：" + strconv.Itoa(reTry))
 		os.Remove(mergedEncPath)
