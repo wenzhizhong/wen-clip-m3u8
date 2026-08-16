@@ -21,6 +21,7 @@ type M3u8Info = struct {
 	// ExtKeyIv          string
 	// ExtKeyTrue        string
 	// ExtKeyIvTrue      string
+	HasExtDiscontinuity bool
 }
 type ExtListItem = struct {
 	Path         string

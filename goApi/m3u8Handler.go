@@ -290,6 +290,12 @@ func (a *M3u8Handler) ParseM3u8File(path string, content *string) (m3u8Info *com
 	m3u8Info.ExtListLen = 0
 	for i := 0; i < len(contentLines); i++ {
 		line := contentLines[i]
+		if strings.Contains(line, "X-DISCONTINUITY") {
+			tmpNextLine := strings.Trim(contentLines[i+1], "\r\n")
+			if strings.Contains(tmpNextLine, "EXTINF") && !m3u8Info.HasExtDiscontinuity {
+				m3u8Info.HasExtDiscontinuity = true
+			}
+		}
 		if beginVideoLine && strings.Contains(line, "X-KEY") {
 			startSec = 0
 			extListMapKeyNumber++
@@ -454,6 +460,20 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *common.M3u8Info, 
 			err = a.mergeEncryptedSegments(pathDto.M3u8Dir, listSlice, pathDto.MergeEndPath, 3)
 			if err != nil {
 				return
+			}
+		}
+
+		if m3u8Info.HasExtDiscontinuity {
+			fixTimePath := pathDto.MergeDecPath + ".fix" + filepath.Ext(pathDto.MergeDecPath)
+			tmpArgs := []string{"-i", pathDto.MergeDecPath, "-c", "copy", "-fflags", "+genpts", "-y", fixTimePath}
+			cmd := exec.Command("ffmpeg", tmpArgs...)
+			err = cmd.Run()
+			if err == nil && a.isVideoPlayable(fixTimePath) {
+				err = os.Rename(fixTimePath, pathDto.MergeDecPath)
+				if err != nil {
+					return
+				}
+
 			}
 		}
 
@@ -924,6 +944,7 @@ func (a *M3u8Handler) mergeEncryptedSegments(m3u8VideoBasePath string, segments 
 		}
 		in.Close()
 	}
+	fileSize = 0
 	fileInfo, err = os.Stat(mergedEncPath)
 	if err == nil && fileInfo != nil {
 		fileSize = fileInfo.Size()

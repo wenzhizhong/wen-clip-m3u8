@@ -24,6 +24,7 @@ export interface ExtListItem {
     "ExtKeyUri": string;
     "ExtKeyTrue": string;
     "ExtKeyIvTrue": string;
+    "ExtDiscontinuity": boolean;
 }
 
 /**
