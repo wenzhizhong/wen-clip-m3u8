@@ -40,16 +40,9 @@ type CommandError struct {
 	Underlying error
 }
 
-// 检查ffmpeg是否安装
-func (a *M3u8Handler) CheckFfmpeg() error {
-	cmd := exec.Command("ffmpeg", "-version")
-	// 设置 Windows 下不显示窗口
-	if runtime.GOOS == "windows" {
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			HideWindow: true,
-		}
-	}
-	return cmd.Run()
+// 检查环境
+func (a *M3u8Handler) CheckEnv() error {
+	return a.doCheckEnv()
 }
 
 // 打开m3u8文件
@@ -78,6 +71,34 @@ func (a *M3u8Handler) DeleteM3u8Source(path string) (data interface{}, err error
 // 重新分片
 func (a *M3u8Handler) ReCut(path string) (data interface{}, err error) {
 	return a.doReCut(path)
+}
+func (a *M3u8Handler) doCheckEnv() error {
+	errs := []string{}
+	tmpMap := map[string][]string{
+		"ffmpeg":   {"-version"},
+		"openssl1": {"-version"},
+	}
+	for k, v := range tmpMap {
+		err := a.doCheckEnvFunc(k, v...)
+		if err != nil {
+			errs = append(errs, k)
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.New("请先安装：" + strings.Join(errs, ","))
+	}
+	return nil
+}
+func (a *M3u8Handler) doCheckEnvFunc(name string, args ...string) error {
+	cmd := exec.Command(name, args...)
+	// 设置 Windows 下不显示窗口
+	if runtime.GOOS == "windows" {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			HideWindow: true,
+		}
+	}
+	return cmd.Run()
 }
 func (a *M3u8Handler) doReCut(path string) (data interface{}, err error) {
 	content, err := a.CheckM3u8File(path)

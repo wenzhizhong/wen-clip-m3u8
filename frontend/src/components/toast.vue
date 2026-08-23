@@ -129,7 +129,7 @@ export default {
       h('button', {
         class: 'close',
         onClick: this.close
-      }, 'X')
+      }, '❌')
     ]);
   }
 };
@@ -140,6 +140,7 @@ export default {
   max-width: 80%;
   min-height: 50px;
   line-height: 50px;
+  padding: 4px;
   position: fixed;
   top: 100px;
   left: 50%;
@@ -174,8 +175,10 @@ export default {
 .toast .text {
   display: inline-block;
   min-width: 300px;
-  padding-left: 10px;
+  line-height: 30px;
+  padding-left: 6px;
   word-wrap:break-word; 
+  white-space: pre-line;
 }
 
 .toast .close {
@@ -183,7 +186,7 @@ export default {
   height: 24px;
   line-height: 20px;
   text-align: center;
-  font-size: 14px;
+  font-size: 12px;
   color: #888888;
   background-color: rgb(255, 241, 241);
   position: absolute;
@@ -194,6 +197,7 @@ export default {
   border: solid 1px rgba(0, 0, 0, 0.2);
   border-radius: 50%;
   user-select: none;
+  padding-left: 3px;
 }
 
 .toast .close:hover {

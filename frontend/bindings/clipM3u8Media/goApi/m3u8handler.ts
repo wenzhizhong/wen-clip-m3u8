@@ -10,10 +10,10 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 import * as common$0 from "./common/models.js";
 
 /**
- * 检查ffmpeg是否安装
+ * 检查环境
  */
-export function CheckFfmpeg(): $CancellablePromise<void> {
-    return $Call.ByID(4155590157);
+export function CheckEnv(): $CancellablePromise<void> {
+    return $Call.ByID(1783984859);
 }
 
 /**

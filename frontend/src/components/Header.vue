@@ -4,7 +4,7 @@ import {ToggleWindowByName, } from '../../bindings/clipM3u8Media/app'
 import {} from '../../bindings/clipM3u8Media/goApi/common'
 import {MessageDialog, OpenFileDialog, } from '../../bindings/clipM3u8Media/goApi/Runtime'
 import {GetAppPreUploadWindowName, } from '../../bindings/clipM3u8Media/goApi/getconstant'
-import {CheckFfmpeg, ClearM3u8FileJob, MergeM3u8File, OpenM3u8File, DeleteM3u8Source, ReCut} from '../../bindings/clipM3u8Media/goApi/M3u8Handler'
+import {CheckEnv, ClearM3u8FileJob, MergeM3u8File, OpenM3u8File, DeleteM3u8Source, ReCut} from '../../bindings/clipM3u8Media/goApi/M3u8Handler'
 
 import {toast} from './toast.vue'
 import { confirm } from './confirm.vue';
@@ -14,6 +14,7 @@ import { getSystem } from '../common/utils/browser'
 import { deleteTagKey, mergeSuccessKey, onSaveLockKey, uploadM3u8Key } from '../common/constant/localStorageKey';
 import { getPathDir } from '../common/utils/path';
 import { LOCAL_FILE } from '../common/request/api';
+import { parseGoApiError } from '../common/utils/error'
 
 const props = defineProps({
   callback:{
@@ -31,12 +32,12 @@ onMounted(() => {
   clearStorage(storageKeys)
 
   toast.info("检测ffmpeg中...") 
-  CheckFfmpeg().then(()=>{
+  CheckEnv().then(()=>{
     setTimeout(() => {
       toast.success("检测成功", 10000)
     }, 500);
   }).catch((e: any)=>{
-    toast.error("请先安装ffmpeg" , 10000)
+    toast.error(parseGoApiError(e), -1)
   })
 })
 
@@ -62,8 +63,7 @@ function  onSelectM3u8() {
       toast.warning("已取消选择文件" , 10000)
     }
   }).catch((error: any)=>{
-    let msg = typeof error === 'string' ? error : error.message;
-    toast.error(msg, -1)
+    toast.error(parseGoApiError(error), -1)
   });
 }
 function doOpenM3u8File(m3u8Path){
@@ -76,8 +76,7 @@ function doOpenM3u8File(m3u8Path){
     doReset();
     props.callback(operateType.updoad, res)
   }).catch((error: any)=>{ 
-    let msg = typeof error === 'string' ? error : error.message;
-    toast.error(msg, -1)
+    toast.error(parseGoApiError(error), -1)
   });
 }
 function toggleWindowByName(status :boolean){
@@ -109,8 +108,7 @@ function onClearM3u8(){
           props.callback(operateType.clear, uploadM3u8Data.M3u8Path)
           toast.success("已清空", 10000)
         }).catch((error: any)=>{ 
-          let msg = typeof error === 'string' ? error : error.message;
-          toast.error(msg, -1)
+          toast.error(parseGoApiError(error), -1)
         });
       }
     },
@@ -144,8 +142,7 @@ function onDeleteSource(){
             toast.success("已删除原文件", 10000)
           })
         }).catch((error: any)=>{ 
-          let msg = typeof error === 'string' ? error : error.message;
-          toast.error(msg, -1)
+          toast.error(parseGoApiError(error), -1)
         });
       }
     },
@@ -229,8 +226,7 @@ function onSave(){
         let storageKeys = [onSaveLockKey]
         clearStorage(storageKeys)
 
-        let msg = typeof error === 'string' ? error : error.message;
-        toast.error(msg ||"合并视频失败", -1)
+        toast.error(parseGoApiError(error, "合并视频失败"), -1)
       });
     }
   })
@@ -270,8 +266,7 @@ function reCut(){
           doOpenM3u8File(res.Path)
         }
       }).catch((error: any)=>{
-        let msg = typeof error === 'string' ? error : error.message;
-        toast.error(msg ||"重新切片失败", -1)
+        toast.error(parseGoApiError(error, "重新切片失败"), -1)
       })
     }
   })
