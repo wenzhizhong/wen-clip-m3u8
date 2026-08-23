@@ -80,6 +80,13 @@ export function ParseM3u8File(path: string, content: string | null): $Cancellabl
     });
 }
 
+/**
+ * 重新分片
+ */
+export function ReCut(path: string): $CancellablePromise<any> {
+    return $Call.ByID(1485995891, path);
+}
+
 // Private type creation functions
 const $$createType0 = $Create.Map($Create.Any, $Create.Any);
 const $$createType1 = $Create.Array($$createType0);

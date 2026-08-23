@@ -3,6 +3,7 @@ package common
 import (
 	"os"
 	"path/filepath"
+	"time"
 )
 
 func LogToFile(m3u8Path string, logContent string) (err error) {
@@ -13,6 +14,8 @@ func LogToFile(m3u8Path string, logContent string) (err error) {
 		return err
 	}
 	defer handel.Close()
-	_, err = handel.WriteString(logContent)
+
+	dateTimeStr := time.Time{}.Format(time.DateTime)
+	_, err = handel.WriteString(dateTimeStr + " " + logContent)
 	return err
 }

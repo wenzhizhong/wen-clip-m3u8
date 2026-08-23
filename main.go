@@ -89,7 +89,7 @@ func main() {
 		Title:  "clipM3u8Media",
 		Name:   common.AppMainWindowName,
 		URL:    "/",
-		Width:  1024,
+		Width:  1100,
 		Height: 768,
 		// OnBeforeClose: (&goApi.Runtime{}).BeforeClose,
 		// OnStartup:        app.startup,

@@ -4,7 +4,7 @@ import {ToggleWindowByName, } from '../../bindings/clipM3u8Media/app'
 import {} from '../../bindings/clipM3u8Media/goApi/common'
 import {MessageDialog, OpenFileDialog, } from '../../bindings/clipM3u8Media/goApi/Runtime'
 import {GetAppPreUploadWindowName, } from '../../bindings/clipM3u8Media/goApi/getconstant'
-import {CheckFfmpeg, ClearM3u8FileJob, MergeM3u8File, OpenM3u8File, DeleteM3u8Source} from '../../bindings/clipM3u8Media/goApi/M3u8Handler'
+import {CheckFfmpeg, ClearM3u8FileJob, MergeM3u8File, OpenM3u8File, DeleteM3u8Source, ReCut} from '../../bindings/clipM3u8Media/goApi/M3u8Handler'
 
 import {toast} from './toast.vue'
 import { confirm } from './confirm.vue';
@@ -27,6 +27,9 @@ const state = ref({
 })
 
 onMounted(() => {
+  let storageKeys = [onSaveLockKey]
+  clearStorage(storageKeys)
+
   toast.info("检测ffmpeg中...") 
   CheckFfmpeg().then(()=>{
     setTimeout(() => {
@@ -54,22 +57,25 @@ function  onSelectM3u8() {
       console.log('用户选择了文件：', m3u8Path[0]);
       toast.warning("正在解析视频，请耐心等待....", -1)
 
-      OpenM3u8File(m3u8Path[0]).then((res :uploadM3u8Interface)=>{ 
-        toast.success("解析完成", 10000)
-        console.log( "res: uploadM3u8Interface=", res);
-    
-        res.M3u8Dir = getPathDir(m3u8Path[0])
-        res.M3u8Path = m3u8Path[0]
-        doReset();
-        props.callback(operateType.updoad, res)
-      }).catch((error: any)=>{ 
-        let msg = typeof error === 'string' ? error : error.message;
-        toast.error(msg, -1)
-      });
+      doOpenM3u8File(m3u8Path[0])
     }else{
       toast.warning("已取消选择文件" , 10000)
     }
   }).catch((error: any)=>{
+    let msg = typeof error === 'string' ? error : error.message;
+    toast.error(msg, -1)
+  });
+}
+function doOpenM3u8File(m3u8Path){
+  OpenM3u8File(m3u8Path).then((res :uploadM3u8Interface)=>{ 
+    toast.success("解析完成", 10000)
+    console.log( "res: uploadM3u8Interface=", res);
+
+    res.M3u8Dir = getPathDir(m3u8Path)
+    res.M3u8Path = m3u8Path
+    doReset();
+    props.callback(operateType.updoad, res)
+  }).catch((error: any)=>{ 
     let msg = typeof error === 'string' ? error : error.message;
     toast.error(msg, -1)
   });
@@ -246,6 +252,31 @@ function zoomClice(type :number){
   })
 }
 
+function reCut(){
+  let data = localStorage.getItem( uploadM3u8Key )
+  if (!data || data === '' || data === '{}') {
+    toast.warning("没有需要重新切片的数据" , 10000)
+    return
+  }
+  const uploadM3u8Data = JSON.parse(data) as uploadM3u8Interface
+  
+  confirm.show({
+    title: '重新切片',
+    content: '是否重新切片视频?',
+    onConfirm: () => {
+      ReCut (uploadM3u8Data.M3u8Path).then((res:any)=>{
+        console.log(res)
+        if (res && res.Path){
+          doOpenM3u8File(res.Path)
+        }
+      }).catch((error: any)=>{
+        let msg = typeof error === 'string' ? error : error.message;
+        toast.error(msg ||"重新切片失败", -1)
+      })
+    }
+  })
+}
+
 function clearStorage(keys :string[]) { 
   for (let i = 0; i < keys.length; i++) { 
     localStorage.removeItem(keys[i])
@@ -286,6 +317,12 @@ function clearStorage(keys :string[]) {
       <span>删除源</span>
     </span>
 
+    <span class="p-opt-item">
+      <span class="opt-item" @click="reCut">
+        <img src="/src/assets/images/header/re-cut.png" alt="ic_zoom_origin.png"> 
+        <span>预览问题，重新切片</span>
+      </span>
+    </span>
     <span class="p-opt-item">
       <span class="opt-item" @click="()=>{zoomClice(0)}">
         <img src="/src/assets/images/header/ic_zoom_origin.png" alt="ic_zoom_origin.png"> 
@@ -349,7 +386,7 @@ function clearStorage(keys :string[]) {
     display: flex;
     .p-opt-item{
       display: flex;
-      margin: 0 100px;
+      margin: 0 0 0 50px;
     }
     .opt-item{
       user-select: none;

@@ -31,15 +31,25 @@ type ExtListItem = struct {
 	ExtKeyUri    string
 	ExtKeyTrue   string
 	ExtKeyIvTrue string
+	ExtKeyMethod string
 }
 
 type AllPathDto = struct {
-	SliceMp4Path      string
-	M3u8Dir           string
-	UniqueName        string
-	M3u8VideoBasePath string
-	MergeEndPath      string
-	MergeDecPath      string
-	M3u8VideoPathTpl  string
-	CoverImagePathTpl string
+	SliceMp4Path           string
+	M3u8Dir                string
+	UniqueName             string
+	M3u8VideoBasePath      string
+	MergeEndPath           string
+	MergeDecPath           string
+	M3u8VideoPathTpl       string
+	CoverImagePathTpl      string
+	ReCutM3u8Path          string
+	MergeResultPathOfReCut string
+
+	ResultMp4Dir         string
+	ResultMp4FileName    string
+	ResultMp4FileRelPath string
+	ResultMp4FileAbsPath string
+	MergeFromFileRelPath string
+	MergeFromFileAbsPath string
 }

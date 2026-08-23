@@ -14,6 +14,14 @@ export interface AllPathDto {
     "MergeDecPath": string;
     "M3u8VideoPathTpl": string;
     "CoverImagePathTpl": string;
+    "ReCutM3u8Path": string;
+    "MergeResultPathOfReCut": string;
+    "ResultMp4Dir": string;
+    "ResultMp4FileName": string;
+    "ResultMp4FileRelPath": string;
+    "ResultMp4FileAbsPath": string;
+    "MergeFromFileRelPath": string;
+    "MergeFromFileAbsPath": string;
 }
 
 export interface ExtListItem {
@@ -24,7 +32,7 @@ export interface ExtListItem {
     "ExtKeyUri": string;
     "ExtKeyTrue": string;
     "ExtKeyIvTrue": string;
-    "ExtDiscontinuity": boolean;
+    "ExtKeyMethod": string;
 }
 
 /**
@@ -44,4 +52,14 @@ export interface M3u8Info {
     "ExtPlaylistType": string;
     "ExtList": { [_ in string]?: ExtListItem[] };
     "ExtListLen": number;
+
+    /**
+     * ExtKey            string
+     * ExtKeyMethod      string
+     * ExtKeyUri         string
+     * ExtKeyIv          string
+     * ExtKeyTrue        string
+     * ExtKeyIvTrue      string
+     */
+    "HasExtDiscontinuity": boolean;
 }
