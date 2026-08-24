@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -70,13 +71,15 @@ func (a *M3u8Handler) DeleteM3u8Source(path string) (data interface{}, err error
 
 // 重新分片
 func (a *M3u8Handler) ReCut(path string) (data interface{}, err error) {
+	path = strings.ReplaceAll(path, common.ReCutNamePlaceholder, "")
+	a.ClearM3u8FileJob(path)
 	return a.doReCut(path)
 }
 func (a *M3u8Handler) doCheckEnv() error {
 	errs := []string{}
 	tmpMap := map[string][]string{
-		"ffmpeg":   {"-version"},
-		"openssl1": {"-version"},
+		"ffmpeg":  {"-version"},
+		"openssl": {"version"},
 	}
 	for k, v := range tmpMap {
 		err := a.doCheckEnvFunc(k, v...)
@@ -101,6 +104,7 @@ func (a *M3u8Handler) doCheckEnvFunc(name string, args ...string) error {
 	return cmd.Run()
 }
 func (a *M3u8Handler) doReCut(path string) (data interface{}, err error) {
+	path = strings.ReplaceAll(path, common.ReCutNamePlaceholder, "")
 	content, err := a.CheckM3u8File(path)
 	if err != nil {
 		_, file, line, _ := runtime.Caller(0)
@@ -206,21 +210,25 @@ func (a *M3u8Handler) doOpenM3u8File(path string) (data interface{}, err error) 
 		return data, err
 	}
 
-	playPathList, err = a.getM3u8SliceVideo(path, m3u8Info, &contentLines)
-	if err != nil {
+	playPathList, hasCoverImgError, err1 := a.getM3u8SliceVideo(path, m3u8Info, &contentLines)
+	if err1 != nil {
+		err = err1
 		common.LogToFile(path, err.Error())
-		return
+		return data, err
 	}
 	// fmt.Println(playPathList, err)
 	// fmt.Println(m3u8Info)
 	data = struct {
-		M3u8Info     common.M3u8Info
-		PlayPathList []map[string]interface{}
+		M3u8Info         common.M3u8Info
+		PlayPathList     []map[string]interface{}
+		HasCoverImgError bool
 	}{
-		M3u8Info:     *m3u8Info,
-		PlayPathList: playPathList,
+		M3u8Info:         *m3u8Info,
+		PlayPathList:     playPathList,
+		HasCoverImgError: hasCoverImgError,
 	}
-	return
+	fmt.Println("doOpenM3u8File(): 执行结束")
+	return data, err
 }
 
 func (a *M3u8Handler) doClearM3u8FileJob(paths []string) (result bool, err error) {
@@ -589,14 +597,14 @@ func (a *M3u8Handler) getM3u8Dir(path string) string {
 
 // 获取每个m3u8分片视频列表
 
-func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *common.M3u8Info, contentLines *[]string) (playPathList []map[string]interface{}, err error) {
+func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *common.M3u8Info, contentLines *[]string) (playPathList []map[string]interface{}, hasCoverImgError bool, err error) {
 	playPathList = make([]map[string]interface{}, 0)
 	tmpPlayPathMap := make(map[string]map[string]interface{})
 	extList := m3u8Info.ExtList
 	listSliceLen := m3u8Info.ExtListLen
 
 	for listMapKey, listSlice := range extList {
-		listSliceChunk := utils.ArrayChunk(listSlice, 50)
+		listSliceChunk := utils.ArrayChunk(listSlice, common.SliceChunkNum)
 		listSliceChunkLen := len(listSliceChunk)
 		pathDto := a.GetGetAllPathDto(path, listMapKey)
 		tmpSliceMp4Path := pathDto.SliceMp4Path
@@ -653,7 +661,34 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *common.M3u8Info, 
 			}
 		}
 
-		if m3u8Info.HasExtDiscontinuity {
+		videoInfo := &common.VideoInfo{}
+		videoInfo, err = common.GetVideoInfoJSON(pathDto.MergeDecPath)
+		if err == nil {
+			var tmpCurrentGroupSliceDur int64 = 0
+			for i := 0; i < len(listSlice); i++ {
+				tmpCurrentGroupSliceDur += int64(listSlice[i].ExtDuration * 1_000_000)
+			}
+			if videoInfo.Format.Duration == "" {
+				videoInfo.Format.Duration = "0"
+			}
+			mergeVideoDur, _ := strconv.ParseFloat(videoInfo.Format.Duration, 64)
+			currentGroupSliceDur := float64(tmpCurrentGroupSliceDur) / 1_000_000.0
+			absValue := math.Abs(mergeVideoDur - currentGroupSliceDur)
+			if absValue > 3 {
+				fixTimePath := pathDto.MergeDecPath + ".fix" + filepath.Ext(pathDto.MergeDecPath)
+				tmpArgs := []string{"-i", pathDto.MergeDecPath, "-c", "copy", "-fflags", "+genpts", "-y", fixTimePath}
+				cmd := exec.Command("ffmpeg", tmpArgs...)
+				err = cmd.Run()
+				fmt.Println("合并视频时长与切片时长相差超过3秒，重新生成时间戳:\nffmpeg ", strings.Join(tmpArgs, " "))
+				if err == nil && a.isVideoPlayable(fixTimePath) {
+					err = os.Rename(fixTimePath, pathDto.MergeDecPath)
+					if err != nil {
+						return
+					}
+				}
+			}
+		}
+		/* if m3u8Info.HasExtDiscontinuity {
 			fixTimePath := pathDto.MergeDecPath + ".fix" + filepath.Ext(pathDto.MergeDecPath)
 			tmpArgs := []string{"-i", pathDto.MergeDecPath, "-c", "copy", "-fflags", "+genpts", "-y", fixTimePath}
 			cmd := exec.Command("ffmpeg", tmpArgs...)
@@ -666,7 +701,7 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *common.M3u8Info, 
 				}
 
 			}
-		}
+		}*/
 
 		type M3u8SliceVideo = struct {
 			SliceVideo []map[string]interface{}
@@ -697,10 +732,12 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *common.M3u8Info, 
 
 		for i := 0; i < listSliceChunkLen; i++ {
 			tmpM3u8SliceVideo := <-ch
+
 			if tmpM3u8SliceVideo[0].Error != nil {
-				err = tmpM3u8SliceVideo[0].Error
-				common.LogToFile(path, fmt.Sprintf("获取m3u8分片视频列表失败：%v\n", err))
-				continue
+				hasCoverImgError = true
+				// err = tmpM3u8SliceVideo[0].Error
+				common.LogToFile(path, fmt.Sprintf("获取m3u8分片视频列表失败：%v\n", tmpM3u8SliceVideo[0].Error))
+				// continue
 			}
 			sliceVideoList := tmpM3u8SliceVideo[0].SliceVideo
 			for j := 0; j < len(sliceVideoList); j++ {
@@ -889,13 +926,22 @@ func (a *M3u8Handler) DoGetM3u8SliceVideoV2(path string, pathDto *common.AllPath
 	}
 	playPathList = make([]map[string]interface{}, 0)
 
+	sliceChunkNum := common.SliceChunkNum
+	sliceChunkNumStr := strconv.Itoa(sliceChunkNum)
+	listSliceLen := len(listSlice)
 	for i, seg := range listSlice {
 		startSec := float64(seg.StartSec) / 1_000_000.0
 
 		sliceIndex, sliceName := a.getSliceIndexAndName(seg.Path)
 		m3u8VideoPath := filepath.Join(pathDto.M3u8Dir, sliceMp4PathName, pathDto.UniqueName, sliceName)
 
-		fmt.Println(fmt.Sprintf("sliceName=%v, duration=%v, startSec=%v", sliceName, seg.ExtDuration, startSec))
+		// fmt.Println(fmt.Sprintf("sliceName=%v, duration=%v, startSec=%v", sliceName, seg.ExtDuration, startSec))
+		lineBreak := ""
+		if i == listSliceLen-1 {
+			lineBreak = "\n"
+		}
+		currentItem := strconv.Itoa(i + 1)
+		fmt.Printf("\r[%-"+sliceChunkNumStr+"s] "+currentItem+"/"+sliceChunkNumStr+lineBreak, strings.Repeat("=", i+1))
 
 		// 定义封面图路径
 		coverImagePath := m3u8VideoPath + ".jpg"
@@ -913,13 +959,13 @@ func (a *M3u8Handler) DoGetM3u8SliceVideoV2(path string, pathDto *common.AllPath
 		coverExists := false
 
 		if optType == OptTypeVideo {
-			if _, err := os.Stat(m3u8VideoPath); !os.IsNotExist(err) {
+			if _, err1 := os.Stat(m3u8VideoPath); !os.IsNotExist(err1) {
 				videoExists = true
 			}
 		}
 
 		if optType == OptTypeCoverImg {
-			if _, err := os.Stat(coverImagePath); !os.IsNotExist(err) {
+			if _, err1 := os.Stat(coverImagePath); !os.IsNotExist(err1) {
 				coverExists = true
 			}
 		}
@@ -966,7 +1012,7 @@ func (a *M3u8Handler) DoGetM3u8SliceVideoV2(path string, pathDto *common.AllPath
 			var stderrWriterPlanB io.Writer
 
 			// 检查 stderr 是否可用
-			if _, err := os.Stderr.Stat(); err == nil {
+			if _, err1 := os.Stderr.Stat(); err1 == nil {
 				// stderr 可用，创建多重写入器
 				stderrWriter = io.MultiWriter(&stderrBuf, os.Stderr)
 				stderrWriterPlanB = io.MultiWriter(&stderrBufPlanB, os.Stderr)
@@ -1015,6 +1061,7 @@ func (a *M3u8Handler) DoGetM3u8SliceVideoV2(path string, pathDto *common.AllPath
 				}
 				playPathListItem["error"] = cmdErr
 
+				fmt.Println("\n ")
 				_, file, line, _ := runtime.Caller(0)
 				common.LogToFile(path, fmt.Sprintf("%s:%d %v\n", file, line, cmdErr))
 				playPathList = append(playPathList, playPathListItem)
@@ -1038,18 +1085,20 @@ func (a *M3u8Handler) DoGetM3u8SliceVideoV2(path string, pathDto *common.AllPath
 			coverCmd := exec.Command("ffmpeg", args...)
 			var stderr bytes.Buffer
 			coverCmd.Stderr = &stderr
-			err := coverCmd.Run()
-			// if err != nil && strings.Contains((stderr).String(), "dec:h263") {
+			err1 := coverCmd.Run()
+			// if err1 != nil && strings.Contains((stderr).String(), "dec:h263") {
 			// 	args = append(args, "-vcodec", "h264")
 			// 	coverCmd2 := exec.Command("ffmpeg", args...)
 			// 	var stderr bytes.Buffer
 			// 	coverCmd2.Stderr = &stderr
-			// 	err = coverCmd2.Run()
+			// 	err1 = coverCmd2.Run()
 			// }
-			if err != nil {
-				log.Printf("提取第 %d 个封面失败: %v \n %v", i, err, (stderr).String())
+			if err1 != nil {
+				err = err1
+				log.Printf("\n提取第 %d 个封面失败: %v \n %v\n", i, err, (stderr).String())
 				fmt.Println("ffmpeg ", strings.Join(args, " "))
 				playPathListItem["cover_error"] = err.Error() + (stderr).String() // 记录封面提取错误
+				common.LogToFile(path, fmt.Sprintf("提取 %s 封面失败:\n%v \n%v \n %v\n", sliceName, "ffmpeg "+strings.Join(args, " "), err, (stderr).String()))
 			}
 		}
 		playPathList = append(playPathList, playPathListItem)

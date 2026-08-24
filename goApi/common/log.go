@@ -15,7 +15,7 @@ func LogToFile(m3u8Path string, logContent string) (err error) {
 	}
 	defer handel.Close()
 
-	dateTimeStr := time.Time{}.Format(time.DateTime)
-	_, err = handel.WriteString(dateTimeStr + " " + logContent)
+	dateTimeStr := time.Now().Format(time.DateTime)
+	_, err = handel.WriteString(dateTimeStr + " " + filepath.Base(m3u8Path) + "\n" + logContent)
 	return err
 }

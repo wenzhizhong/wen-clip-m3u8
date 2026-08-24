@@ -10,3 +10,4 @@ var M3u8InfoConstant = struct {
 }{
 	ListMapDefKey: "none",
 }
+var SliceChunkNum = 50

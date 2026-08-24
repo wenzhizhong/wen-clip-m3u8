@@ -59,6 +59,13 @@
   &.c-button-danger:hover{
     background-color: rgba(219, 62, 0, 1);
   }
+  &.c-button-warn{
+    background-color: rgba(255, 159, 120, 0.8);
+    border-color: rgb(255, 116, 61);
+  }
+  &.c-button-warn:hover{
+    background-color: rgba(255, 159, 120, 1);
+  }
   &.c-button-info{
     background-color: rgba(211, 211, 211, 0.3);
     border-color: rgb(141, 141, 141);
@@ -152,4 +159,7 @@
     }
   }
   
+}
+.c-cursor-pointer{
+  cursor: pointer;
 }

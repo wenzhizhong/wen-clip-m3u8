@@ -68,8 +68,12 @@ function  onSelectM3u8() {
 }
 function doOpenM3u8File(m3u8Path){
   OpenM3u8File(m3u8Path).then((res :uploadM3u8Interface)=>{ 
-    toast.success("解析完成", 10000)
     console.log( "res: uploadM3u8Interface=", res);
+    if (res.HasCoverImgError) {
+      toast.warning("解析结束，可能存在部分失败，请尝试【重新切片】", -1)
+    }else{
+      toast.success("解析完成", 10000)
+    }
 
     res.M3u8Dir = getPathDir(m3u8Path)
     res.M3u8Path = m3u8Path
@@ -260,6 +264,7 @@ function reCut(){
     title: '重新切片',
     content: '是否重新切片视频?',
     onConfirm: () => {
+      toast.warning("正在重新切片...." , -1)
       ReCut (uploadM3u8Data.M3u8Path).then((res:any)=>{
         console.log(res)
         if (res && res.Path){

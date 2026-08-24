@@ -70,6 +70,11 @@ export const toast = {
   },
   warning(text: string, time: number = 3000) {
     return showToast({ text, type: 'warning', time });
+  },
+  close() {
+    if (toastContainer) {
+      render(null, toastContainer);
+    }
   }
 };
 
@@ -141,6 +146,7 @@ export default {
   min-height: 50px;
   line-height: 50px;
   padding: 4px;
+  padding-right: 50px;
   position: fixed;
   top: 100px;
   left: 50%;
