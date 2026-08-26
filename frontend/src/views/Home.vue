@@ -225,7 +225,7 @@ const initMergeSucCacheData = ()=>{
   #workBox{
     display: flex;
     flex-direction: row; 
-    height: 100vh;
+    height: calc(100vh - 52px);
     box-sizing: border-box;
     main{
       flex: 1;
