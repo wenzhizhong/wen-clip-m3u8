@@ -122,7 +122,10 @@ func (a *M3u8Handler) doReCut(path string) (data interface{}, err error) {
 	pathDto := a.GetGetAllPathDto(path)
 	mergeResultPathOfReCut := pathDto.MergeResultPathOfReCut
 	var stderr bytes.Buffer
-	reCutM3u8ContentPath := a.getM3u8ContentDir(pathDto.ReCutM3u8Path)
+	reCutM3u8ContentPath, _, err := a.getM3u8ContentDir(pathDto.ReCutM3u8Path)
+	if err != nil {
+		return data, err
+	}
 	reCutM3u8ContentDirName := filepath.Base(reCutM3u8ContentPath)
 	mergeFromFileAbsPath := strings.ReplaceAll(pathDto.MergeFromFileAbsPath, ".m3u8", common.ReCutNamePlaceholder+".m3u8")
 
@@ -159,6 +162,13 @@ func (a *M3u8Handler) doReCut(path string) (data interface{}, err error) {
 
 	fmt.Println("ffmpeg", "-i", mergeResultPathOfReCut, "-c:v", "copy", "-c:a", "copy", "-f", "hls", "-hls_time", "5", "-hls_list_size", "0", "-hls_segment_filename", strconv.Quote(filepath.Join(reCutM3u8ContentPath, "%d.ts")), mergeFromFileAbsPath)
 	cmd2 := exec.Command("ffmpeg", "-i", mergeResultPathOfReCut, "-c:v", "copy", "-c:a", "copy", "-f", "hls", "-hls_time", "5", "-hls_list_size", "0", "-hls_segment_filename", (filepath.Join(reCutM3u8ContentPath, "%d.ts")), mergeFromFileAbsPath)
+
+	//-c:v copy（直接复制流），这导致 FFmpeg 失去了“随意切割”的能力，切片点必须严格对齐原始视频 aaa.ts 里的关键帧（I帧）。-hls_time 5 在流复制模式下，仅仅是一个“目标参考值”，而不是“强制精确值”。 生成的“#EXTINF” 时间不是5秒，可以考虑用这个命令重新生成
+	//方案 A（性能换精度）：放弃 -c:v copy，重新编码视频，并强制每隔 5 秒插入一个关键帧。（后果：CPU 占用极高，画质会因重编码有轻微损失，且文件体积可能变化）
+	//  ffmpeg -i aaa.ts -c:v libx264 -c:a copy -force_key_frames "expr:gte(t,n_forced*5)" -f hls -hls_time 5 -hls_list_size 0 -hls_segment_filename "aaa.m3u8_contents/%d.ts" aaa.m3u8
+	// 方案 B（预处理换精度）：在生成 aaa.ts 的时候（比如从 MP4 转 TS 时），就先把 GOP 固定为 5 秒：（假设帧率 25fps，125帧 = 5秒）。这样再拿 aaa.ts 去切片，#EXTINF 就会非常接近 5 秒。
+	// ffmpeg -i input.mp4 -c:v libx264 -g 125 -c:a copy aaa.ts
+
 	if runtime.GOOS == "windows" {
 		cmd.SysProcAttr = &syscall.SysProcAttr{
 			HideWindow: true,
@@ -166,7 +176,7 @@ func (a *M3u8Handler) doReCut(path string) (data interface{}, err error) {
 	}
 	cmd2.Stderr = &stderr
 	if err := cmd2.Run(); err != nil {
-		fmt.Println("重新分片失败：", err, string(stderr.Bytes()))
+		fmt.Println("重新分片失败：", err, stderr.String())
 		return data, err
 	}
 
@@ -368,11 +378,19 @@ func (a *M3u8Handler) doDeleteM3u8Source(path string) (result interface{}, err e
 	path = strings.ReplaceAll(path, common.ReCutNamePlaceholder, "")
 	pathDto := a.GetGetAllPathDto(path)
 	paths := []string{path, pathDto.ReCutM3u8Path}
+	if len(paths) == 0 {
+		return result, nil
+	}
 
 	result = struct {
 		Code int
 	}{
 		Code: 1,
+	}
+	m3u8ContentDir, _, err1 := a.getM3u8ContentDir(paths[0])
+	if err1 != nil {
+		err = err1
+		return result, err
 	}
 	for _, p := range paths {
 		if _, ok := os.Stat(p); os.IsNotExist(ok) {
@@ -386,7 +404,6 @@ func (a *M3u8Handler) doDeleteM3u8Source(path string) (result interface{}, err e
 			continue
 		}
 
-		m3u8ContentDir := a.getM3u8ContentDir(p)
 		err = os.RemoveAll(m3u8ContentDir)
 		if err != nil {
 			errStr += err.Error() + "\n"
@@ -438,7 +455,10 @@ func (a *M3u8Handler) CheckM3u8File(path string) (content string, err error) {
 
 // 解析m3u8文件
 func (a *M3u8Handler) ParseM3u8File(path string, content *string) (m3u8Info *common.M3u8Info, contentLines []string, err error) {
-	m3u8ContentDir := a.getM3u8ContentDir(path)
+	m3u8ContentDir, isDefM3u8Contents, err := a.getM3u8ContentDir(path)
+	if err != nil {
+		return m3u8Info, contentLines, err
+	}
 	contentLines = strings.Split(*content, "\n")
 	if !strings.Contains(contentLines[0], "EXTM3U") {
 		return m3u8Info, contentLines, errors.New("请选择m3u8文件")
@@ -520,6 +540,9 @@ func (a *M3u8Handler) ParseM3u8File(path string, content *string) (m3u8Info *com
 
 			i++
 			nextLine := strings.Trim(contentLines[i], "\r\n")
+			if !isDefM3u8Contents {
+				nextLine = a.getM3u8SliceRelatePath(nextLine)
+			}
 			contentLines[i] = nextLine + ".ts" + "\n" // 添加默认后缀.ts
 			nextLineSplit := strings.Split(nextLine, "/")
 			sliceFileName := nextLineSplit[len(nextLineSplit)-1]
@@ -1054,10 +1077,8 @@ func (a *M3u8Handler) DoGetM3u8SliceVideoV2(path string, pathDto *common.AllPath
 			if err != nil {
 				// 尝试获取退出码, 非退出错误（如命令未找到）
 				cmdErr.ExitCode = -1
-				if err != nil {
-					if exitErr, ok := err.(*exec.ExitError); ok {
-						cmdErr.ExitCode = exitErr.ExitCode()
-					}
+				if exitErr, ok := err.(*exec.ExitError); ok {
+					cmdErr.ExitCode = exitErr.ExitCode()
 				}
 				playPathListItem["error"] = cmdErr
 
@@ -1144,12 +1165,103 @@ func (a *M3u8Handler) generateNewM3u8File(newPath string, content *string, final
 	return err
 }
 func (a *M3u8Handler) getM3u8ContentSize(path string) (int64, error) {
-	dir := a.getM3u8ContentDir(path)
+	dir, _, err := a.getM3u8ContentDir(path)
+	if err != nil {
+		return 0, err
+	}
 	return common.GetSize(dir)
 }
-func (a *M3u8Handler) getM3u8ContentDir(path string) string {
-	path = path[:len(path)-5]
-	return path + ".m3u8_contents"
+func (a *M3u8Handler) getM3u8ContentDir(path string) (contentsPath string, isDefM3u8Contents bool, err error) {
+	m3u8Dir := a.getM3u8Dir(path)
+	tmpPath := path[:len(path)-5]
+	tmpContentsPath := tmpPath + ".m3u8_contents"
+
+	fileInfo, err := os.Stat(tmpContentsPath)
+	if err == nil && fileInfo.IsDir() {
+		contentsPath = tmpContentsPath
+		isDefM3u8Contents = true
+		return
+	} else {
+		err = nil
+		protocol := ""
+		nextLine := ""
+		rg := regexp.MustCompile(`^[^:]+$`)
+		rg2 := regexp.MustCompile(`^data:\w+/\w+;base64,.*`)
+
+		tmpContent, _ := os.ReadFile(path)
+		tmpContentStr := ""
+		if len(tmpContent) > 1000 {
+			tmpContentStr = string(tmpContent[:1000])
+		} else {
+			tmpContentStr = string(tmpContent)
+		}
+		contentLines := strings.Split(tmpContentStr, "\n")
+		for i, line := range contentLines {
+			if !strings.Contains(line, "EXTINF") {
+				continue
+			}
+			i++
+			nextLine = strings.Trim(contentLines[i], "\r\n")
+
+			if strings.HasPrefix(nextLine, "file://") {
+				nextLine = strings.ReplaceAll(nextLine, "file://", "")
+			}
+
+			if strings.HasPrefix(nextLine, "http") || strings.HasPrefix(nextLine, "//") {
+				protocol = "http"
+			} else if strings.HasPrefix(nextLine, "/") {
+				protocol = "local"
+			} else {
+				if rg.MatchString(nextLine) && !rg2.MatchString(nextLine) {
+					protocol = "local"
+				}
+			}
+			break
+		}
+		if protocol == "http" {
+			err = os.MkdirAll(contentsPath, os.ModePerm)
+			if err != nil {
+				common.LogToFile(path, "getM3u8ContentDir error, not support: "+nextLine+"\n"+err.Error())
+			}
+		} else if protocol == "local" {
+			tmpPath := a.getM3u8SliceRelatePath(nextLine)
+			tmpPath = filepath.Join(m3u8Dir, tmpPath)
+			tmpPath2 := strings.ReplaceAll(tmpPath+".ts", ".ts.ts", ".ts")
+
+			_, err1 := os.Stat(tmpPath)
+			_, err2 := os.Stat(tmpPath2)
+			if !os.IsNotExist(err1) {
+				tmpContentsPath = filepath.Dir(tmpPath)
+			} else if !os.IsNotExist(err2) {
+				tmpContentsPath = filepath.Dir(tmpPath2)
+			} else {
+				err = errors.New(tmpPath + " or " + tmpPath + ".ts" + " not exist")
+				common.LogToFile(path, "getM3u8ContentDir error, not support: "+err.Error())
+				common.LogToFile(path, "tmpPath: "+tmpPath)
+				common.LogToFile(path, "nextLine: "+nextLine)
+			}
+		} else {
+			common.LogToFile(path, "getM3u8ContentDir error, not support2: ")
+			common.LogToFile(path, "nextLine: "+nextLine)
+		}
+
+		if tmpContentsPath != "" {
+			contentsPath = tmpContentsPath
+		}
+	}
+	return contentsPath, isDefM3u8Contents, err
+}
+func (a *M3u8Handler) getM3u8SliceRelatePath(line string) string {
+	line = strings.TrimSpace(line)
+	filename := filepath.Base(line)
+	nextLineSlices := strings.Split(line, "/")
+	nextLineSlicesLen := len(nextLineSlices)
+
+	relativePath := filename
+	if nextLineSlicesLen > 1 {
+		relativePath = nextLineSlices[nextLineSlicesLen-2] + "/" + nextLineSlices[nextLineSlicesLen-1]
+	}
+	return relativePath
 }
 
 func (a *M3u8Handler) getSliceMp4Path(path string) string {
@@ -1226,7 +1338,7 @@ func (m *M3u8Handler) mergeDecryptedSegments(listItem common.ExtListItem, merged
 	decryptCmd.Stderr = &out // 捕获错误输出
 	if err := decryptCmd.Run(); err != nil {
 		fmt.Println("ffmpeg ", strings.Join(args, " "))
-		return fmt.Errorf(err.Error() + "\n" + out.String()), out
+		return fmt.Errorf("%s", err.Error()+"\n"+out.String()), out
 	}
 	return nil, out
 }
@@ -1255,6 +1367,10 @@ func (a *M3u8Handler) getKeyAndVi(path, m3u8ItemLine string) (key, iv, method st
 }
 
 func (a *M3u8Handler) createKeyFileIfNotExist(path string, m3u8ItemLine string, keyUriExists []string) (tryResult bool) {
+	contentsPath, _, err := a.getM3u8ContentDir(path)
+	if err != nil {
+		return
+	}
 	tmpKey, tmpKeyIv, tmpMethod, tmpKeyUri := a.parseM3u8FileXKey(path, m3u8ItemLine)
 	if false {
 		fmt.Println(tmpKey, tmpKeyIv, tmpMethod, tmpKeyUri)
@@ -1270,8 +1386,8 @@ func (a *M3u8Handler) createKeyFileIfNotExist(path string, m3u8ItemLine string, 
 	tmpKeyFileName := filepath.Base(tmpKeyUri)
 	tmpSliceName := strings.ReplaceAll(tmpKeyFileName, ".key", ".ts")
 	tryParseTargetPath := filepath.Join(pathDto.SliceMp4Path, tmpSliceName)
-	tryParseSourcePath := filepath.Join(a.getM3u8ContentDir(path), tmpSliceName)
-	keyFilePath := filepath.Join(a.getM3u8ContentDir(path), tmpKeyFileName)
+	tryParseSourcePath := filepath.Join(contentsPath, tmpSliceName)
+	keyFilePath := filepath.Join(contentsPath, tmpKeyFileName)
 
 	for _, existKeyUri := range keyUriExists {
 		tmpKey, tmpKeyIv, tmpMethod, tmpKeyUri = a.parseM3u8FileXKey(path, existKeyUri)

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { reactive, onMounted } from 'vue';
+import { reactive, onMounted, watch, nextTick } from 'vue';
 import { operateType } from '../common/constant/headerOperate';
 import { deleteTagKey, mergeSuccessKey, uploadM3u8Key } from '../common/constant/localStorageKey';
 import { uploadM3u8Interface, ParseM3u8SliceInterface, PlayPathListInterface, mergeSuccessInterface } from '../common/types/m3u8Slice';
@@ -10,7 +10,7 @@ import MyVideoInfo from '../components/videoInfo.vue'
 import { getPathDir, getM3u8PathFileName } from '../common/utils/path';
 
 
-const state = reactive({
+const state = ref({
   uploadM3u8Data: {
     M3u8Info:     {} as ParseM3u8SliceInterface,
     PlayPathList: [] as PlayPathListInterface[],
@@ -46,12 +46,13 @@ function initDataFromCache() {
     setUploadM3u8Data(uploadM3u8Data)
   }
 }
-const headerHeaderCallback = (type :string, data :any) => {
+const headerHeaderCallback = async (type :string, data :any) => {
   switch (type) {
     case operateType.updoad:
       data = data as uploadM3u8Interface
       localStorage.setItem(uploadM3u8Key, JSON.stringify(data))
       setUploadM3u8Data(data)
+      await nextTick();
       break;
     case operateType.mergeSuc:
       data = data as mergeSuccessInterface
@@ -59,7 +60,7 @@ const headerHeaderCallback = (type :string, data :any) => {
         localStorage.setItem(mergeSuccessKey, JSON.stringify(data))
         setMergeSuccessData(data)
       }else{
-        state.mergeSuccessData.PlayPathList = []
+        state.value.mergeSuccessData.PlayPathList = []
       }
       break;
     case operateType.clear:
@@ -71,18 +72,18 @@ const headerHeaderCallback = (type :string, data :any) => {
       break;
     case operateType.zoom:
       data = data as uploadM3u8Interface
-      state.zoomNumber = data.zoomNumber || 0
+      state.value.zoomNumber = data.zoomNumber || 0
       break;
     default:
       break;
   }
 }
 function setUploadM3u8Data(data : uploadM3u8Interface) {
-  state.uploadM3u8Dir = getPathDir(data.M3u8Path)
-  state.uploadM3u8Data = data
+  Object.assign(state.value.uploadM3u8Data, data);
+  state.value.uploadM3u8Dir = getPathDir(data.M3u8Path);
 }
 function setMergeSuccessData(data : mergeSuccessInterface) {
-  state.mergeSuccessData = data
+  Object.assign(state.value.mergeSuccessData, data);
 }
 
 
@@ -123,7 +124,7 @@ const deletedTagCallback = (items: SelectedItem[])=> {
   if (items && items.length > 0){
     console.log('删除项目:', items)
     for (let i = 0; i < items.length; i++) {
-      state.playPathListDeletedTag[items[i].data.path] = true
+      state.value.playPathListDeletedTag[items[i].data.path] = true
     }
     cacheDeleteTag()
   }
@@ -132,21 +133,21 @@ const deletedTagRecverCallback = (items: SelectedItem[])=> {
   if (items && items.length > 0){
     console.log('接收到删除项目:', items)
     for (let i = 0; i < items.length; i++) {
-        delete state.playPathListDeletedTag[items[i].data.path]
+        delete state.value.playPathListDeletedTag[items[i].data.path]
     }
     cacheDeleteTag()
   }else {
-    state.playPathListDeletedTag = {}
+    state.value.playPathListDeletedTag = {}
   }
 }
 const cacheDeleteTag = ()=>{ 
-  localStorage.setItem(deleteTagKey, JSON.stringify(state.playPathListDeletedTag))
+  localStorage.setItem(deleteTagKey, JSON.stringify(state.value.playPathListDeletedTag))
 }
 
 const initDeleteTag = ()=>{ 
   const data = localStorage.getItem(deleteTagKey)
   if (data){
-    state.playPathListDeletedTag = data ? JSON.parse(data) as Record<string, boolean> : {}
+    state.value.playPathListDeletedTag = data ? JSON.parse(data) as Record<string, boolean> : {}
   }
 }
 
@@ -154,7 +155,7 @@ const initMergeSucCacheData = ()=>{
   const data = localStorage.getItem(mergeSuccessKey)
   if (data){
     let tmpData = data ? JSON.parse(data): {} 
-    state.mergeSuccessData = tmpData as mergeSuccessInterface
+    state.value.mergeSuccessData = tmpData as mergeSuccessInterface
   }
 }
 

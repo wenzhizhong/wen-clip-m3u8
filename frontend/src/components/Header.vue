@@ -26,6 +26,27 @@ const state = ref({
   zoomNumber: 0,
   zoomNumberOrigin: 0,
 })
+const stateFile = ref({
+  curStatus: 0,
+  map:{
+    0: {
+      name: "开始解析",
+      className: "text-gray-500",
+    },
+    1: {
+      name: "解析中...",
+      className: "text-yellow-500",
+    },
+    2: {
+      name: "解析完成",
+      className: "text-green-500",
+    },
+    3: {
+      name: "解析失败",
+      className: "text-red-500",
+    },
+  }
+})
 
 onMounted(() => {
   let storageKeys = [onSaveLockKey]
@@ -49,16 +70,25 @@ function  onSelectM3u8() {
     ]
   };
 
+  let res = {
+    M3u8Dir: '',
+    M3u8Path: '',
+    PlayPathList: [],
+    HasCoverImgError: false,
+  }
   let storageKeys = [uploadM3u8Key, deleteTagKey, onSaveLockKey, mergeSuccessKey]
   clearStorage(storageKeys)
   props.callback(operateType.mergeSuc, {})
+  props.callback(operateType.updoad, res)
 
   OpenFileDialog(options).then((m3u8Path: string[])=> {
     if (m3u8Path && m3u8Path.length > 0) {
       console.log('用户选择了文件：', m3u8Path[0]);
-      toast.warning("正在解析视频，请耐心等待....", -1)
+      toast.error("已选择文件，但未开始解析视频" , -1)
 
-      doOpenM3u8File(m3u8Path[0])
+      res.M3u8Dir = getPathDir(m3u8Path[0])
+      res.M3u8Path = m3u8Path[0]
+      props.callback(operateType.updoad, res)
     }else{
       toast.warning("已取消选择文件" , 10000)
     }
@@ -66,12 +96,43 @@ function  onSelectM3u8() {
     toast.error(parseGoApiError(error), -1)
   });
 }
+function doStartOpenM3u8File(){
+  let curSelectedPath = "";
+  const data = localStorage.getItem(uploadM3u8Key)
+  if (data) {
+    const uploadM3u8Data = JSON.parse(data) as uploadM3u8Interface
+    curSelectedPath = uploadM3u8Data.M3u8Path
+  }
+  if (!curSelectedPath) {
+    toast.warning("请先选择m3u8文件" , 10000)
+    return
+  }
+  
+  confirm.show({
+    title: '提示',
+    content: '是否开始解析视频?',
+    onConfirm: () => {
+      toast.warning("正在解析视频，请耐心等待....", -1)
+      doOpenM3u8File(curSelectedPath)
+    }
+  })
+}
 function doOpenM3u8File(m3u8Path){
+  let isLock = localStorage.getItem(onSaveLockKey)
+  if (isLock && isLock === "1") {
+    toast.warning("正在处理中，请稍后操作", -1)
+    return
+  }
+  localStorage.setItem(onSaveLockKey, "1")
+
+  stateFile.value.curStatus = 1
   OpenM3u8File(m3u8Path).then((res :uploadM3u8Interface)=>{ 
     console.log( "res: uploadM3u8Interface=", res);
     if (res.HasCoverImgError) {
+      stateFile.value.curStatus = 3
       toast.warning("解析结束，可能存在部分失败，请尝试【重新切片】", -1)
     }else{
+      stateFile.value.curStatus = 2
       toast.success("解析完成", 10000)
     }
 
@@ -80,7 +141,10 @@ function doOpenM3u8File(m3u8Path){
     doReset();
     props.callback(operateType.updoad, res)
   }).catch((error: any)=>{ 
+    stateFile.value.curStatus = 3
     toast.error(parseGoApiError(error), -1)
+  }).finally(()=>{
+    clearStorage([onSaveLockKey])
   });
 }
 function toggleWindowByName(status :boolean){
@@ -287,14 +351,18 @@ function clearStorage(keys :string[]) {
 
 <template>
   <header >
+    <span class="opt-item" @click="onSelectM3u8">
+      <img src="/src/assets/images/header/add.png" alt="add.png"> 
+      <span>添加</span>
+    </span>
+    <span class="opt-item" @click="doStartOpenM3u8File">
+      <img src="/src/assets/images/header/upload.png" alt="upload.png"> 
+      <span :class="stateFile.map[stateFile.curStatus].className">{{ stateFile.map[stateFile.curStatus].name }}</span>
+    </span>
+
     <span class="opt-item" @click="()=>{toggleWindowByName(true)}">
       <img src="/src/assets/images/header/upload.png" alt="upload.png"> 
       <span>预上传</span>
-    </span>
-
-    <span class="opt-item" @click="onSelectM3u8">
-      <img src="/src/assets/images/header/upload.png" alt="upload.png"> 
-      <span>上传</span>
     </span>
 
     <span class="opt-item" @click="onSave">
@@ -406,7 +474,18 @@ function clearStorage(keys :string[]) {
         width: 16px;
         height: 16px;
       }
-
+      .text-gray-500{
+        color: #888888;
+      }
+      .text-yellow-500{
+        color: #f7b500;
+      }
+      .text-green-500{
+        color: #00b500;
+      }
+      .text-red-500{
+        color: #df4d4f;
+      }
     }
     .opt-item-danger{
       background-color: #ffffff;
