@@ -63,6 +63,7 @@ onMounted(() => {
 })
 
 function  onSelectM3u8() {
+  stateFile.value.curStatus = 0
   const options = {
     Title: "请选择m3u8文件",
     Filters: [

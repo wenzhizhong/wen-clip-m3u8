@@ -625,6 +625,7 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *common.M3u8Info, 
 	tmpPlayPathMap := make(map[string]map[string]interface{})
 	extList := m3u8Info.ExtList
 	listSliceLen := m3u8Info.ExtListLen
+	sliceIndexFormat := ""
 
 	for listMapKey, listSlice := range extList {
 		listSliceChunk := utils.ArrayChunk(listSlice, common.SliceChunkNum)
@@ -767,12 +768,20 @@ func (a *M3u8Handler) getM3u8SliceVideo(path string, m3u8Info *common.M3u8Info, 
 				item := sliceVideoList[j]
 				sliceIndex := item["index"].(string)
 				tmpPlayPathMap[sliceIndex] = item
+
+				if sliceIndexFormat == "" && strings.HasPrefix(sliceIndex, "0") && !strings.HasSuffix(sliceIndex, "0") {
+					sliceIndexFormat = "%0" + fmt.Sprint(len(sliceIndex)) + "d"
+				}
 			}
 		}
 	}
 	// tmpPlayPathName = utils.ArraySort(tmpPlayPathName, 1)
 	for i := 0; i < listSliceLen; i++ {
-		item := tmpPlayPathMap[fmt.Sprint(i)]
+		tmpKey := fmt.Sprint(i)
+		if sliceIndexFormat != "" {
+			tmpKey = fmt.Sprintf(sliceIndexFormat, i)
+		}
+		item := tmpPlayPathMap[tmpKey]
 		if item == nil {
 			continue
 		}
